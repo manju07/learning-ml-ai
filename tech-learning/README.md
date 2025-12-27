@@ -1,10 +1,12 @@
-# Machine Learning, Deep Learning & CNN Learning Resources
+# Machine Learning & AI Learning Resources
 
-Comprehensive documentation and practical examples for learning Machine Learning, Deep Learning, and Convolutional Neural Networks.
+Comprehensive documentation and practical examples for learning Machine Learning and Artificial Intelligence.
 
 ## 📚 Documentation
 
-### 1. [Machine Learning Guide](./learn-ml.md)
+### 🤖 Machine Learning
+
+### 1. [Machine Learning Guide](./ml/learn-ml.md)
 Complete guide covering:
 - Introduction to ML and types of learning
 - Core concepts (features, labels, overfitting, etc.)
@@ -16,7 +18,7 @@ Complete guide covering:
 - End-to-end examples
 - Best practices
 
-### 2. [Deep Learning Guide](./learn-deep-learning.md)
+### 2. [Deep Learning Guide](./ml/learn-deep-learning.md)
 Comprehensive deep learning documentation:
 - Neural networks fundamentals
 - Activation functions (Sigmoid, Tanh, ReLU, Leaky ReLU, ELU, Swish)
@@ -28,7 +30,7 @@ Comprehensive deep learning documentation:
 - Practical examples (MNIST, Text Classification)
 - Tools and frameworks
 
-### 3. [CNN Guide](./learn-cnn.md)
+### 3. [CNN Guide](./ml/learn-cnn.md)
 Complete Convolutional Neural Networks guide:
 - CNN fundamentals and convolution operations
 - Convolutional and pooling layers
@@ -39,7 +41,7 @@ Complete Convolutional Neural Networks guide:
 - Practical examples (CIFAR-10, Custom datasets)
 - Advanced topics (Attention mechanisms, Custom loss functions)
 
-### 4. [TensorFlow Guide](./learn-tensorflow.md)
+### 4. [TensorFlow Guide](./ml/learn-tensorflow.md)
 Comprehensive TensorFlow framework guide:
 - TensorFlow fundamentals and installation
 - Tensors and operations
@@ -55,7 +57,7 @@ Comprehensive TensorFlow framework guide:
 - Advanced topics (Mixed precision, Gradient clipping, Model pruning)
 - Complete practical examples
 
-### 5. [NLP and Transformers Guide](./learn-nlp-transformers.md)
+### 5. [NLP and Transformers Guide](./ai/learn-nlp-transformers.md)
 Complete Natural Language Processing guide:
 - Text preprocessing and tokenization
 - Traditional NLP methods (BoW, TF-IDF, N-grams)
@@ -69,7 +71,7 @@ Complete Natural Language Processing guide:
 - Practical examples (Sentiment analysis, NER, QA, Summarization)
 - Advanced topics (Transfer learning, Model compression)
 
-### 6. [Reinforcement Learning Guide](./learn-reinforcement-learning.md)
+### 6. [Reinforcement Learning Guide](./ai/learn-reinforcement-learning.md)
 Complete Reinforcement Learning guide:
 - RL fundamentals and concepts
 - Markov Decision Process (MDP)
@@ -81,7 +83,7 @@ Complete Reinforcement Learning guide:
 - Practical examples (CartPole, Lunar Lander)
 - Advanced topics (Prioritized Experience Replay, Double DQN)
 
-### 7. [PyTorch Guide](./learn-pytorch.md)
+### 7. [PyTorch Guide](./ml/learn-pytorch.md)
 Comprehensive PyTorch framework guide:
 - PyTorch fundamentals and installation
 - Tensors and operations
@@ -95,7 +97,7 @@ Comprehensive PyTorch framework guide:
 - Model deployment (TorchScript, TorchServe)
 - Practical examples
 
-### 8. [Time Series Forecasting Guide](./learn-time-series.md)
+### 8. [Time Series Forecasting Guide](./ml/learn-time-series.md)
 Complete Time Series Forecasting guide:
 - Time series components (Trend, Seasonality, Noise)
 - Preprocessing and stationarity
@@ -107,7 +109,20 @@ Complete Time Series Forecasting guide:
 - Evaluation metrics (MAE, RMSE, MAPE)
 - Practical examples (Stock prediction)
 
-### 9. [MLOps Guide](./learn-mlops.md)
+### 9. [Ensemble Methods Guide](./ml/learn-ensemble-methods.md)
+Complete Ensemble Methods guide:
+- Bagging, Boosting, Stacking
+- Random Forest, Gradient Boosting
+- Advanced ensemble techniques
+
+### 10. [Recommendation Systems Guide](./ml/learn-recommendation-systems.md)
+Complete Recommendation Systems guide:
+- Collaborative filtering
+- Content-based filtering
+- Hybrid approaches
+- Matrix factorization
+
+### 11. [MLOps Guide](./ml/learn-mlops.md)
 Complete MLOps (Machine Learning Operations) guide:
 - MLOps lifecycle and principles
 - Version control (DVC, Git LFS)
@@ -119,7 +134,7 @@ Complete MLOps (Machine Learning Operations) guide:
 - Model registry and governance
 - Best practices for production ML
 
-### 10. [Data Science Guide](./learn-data-science.md)
+### 12. [Data Science Guide](./ml/learn-data-science.md)
 Complete Data Science role and workflow guide:
 - Data Science role and responsibilities
 - Data Science workflow (CRISP-DM)
@@ -134,7 +149,7 @@ Complete Data Science role and workflow guide:
 - Tools and technologies
 - Career path and progression
 
-### 11. [Deep Python Learning Guide](./learn-python-deep.md)
+### 13. [Deep Python Learning Guide](./ml/learn-python-deep.md)
 Advanced Python programming guide:
 - Python fundamentals review
 - Advanced data structures (Collections module)
@@ -150,7 +165,21 @@ Advanced Python programming guide:
 - Testing and debugging
 - Best practices and Pythonic code
 
-### 12. [Agentic AI Guide](./learn-agentic-ai.md)
+### 14. [Hyperparameter Tuning Guide](./ml/learn-hyperparameter-tuning.md)
+Complete Hyperparameter Tuning guide:
+- Grid search, Random search
+- Bayesian optimization
+- Automated hyperparameter tuning
+
+### 15. [Model Interpretability Guide](./ml/learn-model-interpretability.md)
+Complete Model Interpretability guide:
+- SHAP, LIME
+- Feature importance
+- Model explainability
+
+### 🧠 Artificial Intelligence
+
+### 16. [Agentic AI Guide](./ai/learn-agentic-ai.md)
 Complete Agentic AI frameworks and usage guide:
 - Introduction to Agentic AI and autonomous agents
 - Agent architecture and core components
@@ -165,6 +194,75 @@ Complete Agentic AI frameworks and usage guide:
 - Multi-agent systems and communication
 - Practical examples (Research, Code generation, Data analysis)
 - Best practices (Error handling, Security, Monitoring)
+
+### 17. [Generative AI Guide](./ai/learn-generative-ai.md)
+Complete Generative AI guide:
+- GANs, VAEs, Diffusion Models
+- Image and text generation
+- Advanced generative techniques
+
+### 18. [LLMs and RAG Guide](./ai/learn-llms-rag.md)
+Complete Large Language Models and RAG guide:
+- LLM architectures and training
+- Retrieval-Augmented Generation
+- Fine-tuning and deployment
+
+### 📐 Mathematics Foundations
+
+### 19. [Linear Algebra Guide](./ml/learn-linear-algebra.md)
+Essential linear algebra for ML/DL:
+- Vectors and matrices fundamentals
+- Matrix operations (multiplication, transpose, inverse)
+- Linear transformations
+- Eigenvalues and eigenvectors
+- Matrix decompositions (SVD, QR, Cholesky)
+- Vector spaces and subspaces
+- Norms and distances
+- Applications in ML/DL (PCA, neural networks, attention)
+
+### 20. [Calculus Guide](./ml/learn-calculus.md)
+Calculus fundamentals for ML/DL:
+- Functions, limits, and continuity
+- Derivatives and differentiation rules
+- Partial derivatives and gradients
+- Chain rule (essential for backpropagation)
+- Higher-order derivatives and Hessian
+- Optimization (gradient descent, momentum)
+- Constrained optimization (Lagrange multipliers)
+- Applications in ML/DL (loss functions, training)
+
+### 21. [Probability & Statistics Guide](./ml/learn-probability-statistics.md)
+Probability and statistics for ML/DL:
+- Probability fundamentals and random variables
+- Probability distributions (Normal, Binomial, Poisson)
+- Joint and conditional probability
+- Bayes' theorem and Bayesian inference
+- Expectation, variance, covariance, correlation
+- Central Limit Theorem
+- Hypothesis testing (t-test, chi-square)
+- Maximum Likelihood Estimation (MLE)
+- Applications in ML/DL (loss functions, regularization, uncertainty)
+
+### 22. [Optimization Guide](./ml/learn-optimization.md)
+Optimization methods for ML/DL:
+- Convex optimization fundamentals
+- Gradient-based methods (GD, Momentum, NAG)
+- Adaptive learning rates (AdaGrad, RMSprop, Adam)
+- Second-order methods (Newton's method, BFGS)
+- Stochastic optimization (SGD, mini-batch)
+- Constrained optimization (Lagrange multipliers, projected GD)
+- Non-convex optimization (simulated annealing)
+- Hyperparameter optimization (grid search, random search, Bayesian)
+
+### 23. [Information Theory Guide](./ml/learn-information-theory.md)
+Information theory for ML/DL:
+- Information content and Shannon entropy
+- Joint and conditional entropy
+- Mutual information
+- Kullback-Leibler (KL) divergence
+- Cross-entropy loss
+- Maximum entropy principle
+- Applications in ML/DL (feature selection, model compression, uncertainty)
 
 ## 💻 Practical Examples
 
@@ -201,34 +299,42 @@ python examples/05_text_classification_lstm.py
 ## 📖 Learning Path
 
 ### Beginner
-1. Master [Deep Python Learning](./learn-python-deep.md) fundamentals
-2. Start with [Machine Learning Guide](./learn-ml.md)
-3. Understand [Data Science](./learn-data-science.md) workflow
-4. Understand core concepts and data preprocessing
-5. Try basic algorithms (Linear/Logistic Regression)
-6. Run `01_basic_classification.py`
+1. Master [Deep Python Learning](./ml/learn-python-deep.md) fundamentals
+2. Study foundational mathematics:
+   - [Linear Algebra](./ml/learn-linear-algebra.md) - vectors, matrices, transformations
+   - [Calculus](./ml/learn-calculus.md) - derivatives, gradients, optimization basics
+   - [Probability & Statistics](./ml/learn-probability-statistics.md) - distributions, Bayes' theorem
+3. Start with [Machine Learning Guide](./ml/learn-ml.md)
+4. Understand [Data Science](./ml/learn-data-science.md) workflow
+5. Understand core concepts and data preprocessing
+6. Try basic algorithms (Linear/Logistic Regression)
+7. Run `01_basic_classification.py`
 
 ### Intermediate
-1. Read [Deep Learning Guide](./learn-deep-learning.md)
-2. Understand neural networks and backpropagation
-3. Learn about optimization and regularization
-4. Run `02_mnist_cnn.py` and `05_text_classification_lstm.py`
+1. Deepen mathematical understanding:
+   - [Optimization](./ml/learn-optimization.md) - gradient descent variants, adaptive methods
+   - [Information Theory](./ml/learn-information-theory.md) - entropy, KL divergence, mutual information
+2. Read [Deep Learning Guide](./ml/learn-deep-learning.md)
+3. Understand neural networks and backpropagation
+4. Learn about optimization and regularization
+5. Run `02_mnist_cnn.py` and `05_text_classification_lstm.py`
 
 ### Advanced
-1. Study [CNN Guide](./learn-cnn.md)
+1. Study [CNN Guide](./ml/learn-cnn.md)
 2. Understand advanced architectures (ResNet, U-Net)
 3. Learn transfer learning and fine-tuning
 4. Run `03_transfer_learning.py` and `04_image_segmentation_unet.py`
-5. Master [TensorFlow Guide](./learn-tensorflow.md) for production deployment
+5. Master [TensorFlow Guide](./ml/learn-tensorflow.md) for production deployment
 6. Learn distributed training and TensorFlow Serving
-7. Explore [NLP and Transformers](./learn-nlp-transformers.md) for text processing
-8. Study [Reinforcement Learning](./learn-reinforcement-learning.md) for decision-making
-9. Learn [PyTorch](./learn-pytorch.md) as alternative framework
-10. Master [Time Series Forecasting](./learn-time-series.md) for temporal data
-11. Implement [MLOps](./learn-mlops.md) practices for production
-12. Master [Data Science](./learn-data-science.md) role and workflows
-13. Deepen [Python](./learn-python-deep.md) programming skills
-14. Build [Agentic AI](./learn-agentic-ai.md) systems with LangChain, LlamaIndex, and CrewAI
+7. Explore [NLP and Transformers](./ai/learn-nlp-transformers.md) for text processing
+8. Study [Reinforcement Learning](./ai/learn-reinforcement-learning.md) for decision-making
+9. Learn [PyTorch](./ml/learn-pytorch.md) as alternative framework
+10. Master [Time Series Forecasting](./ml/learn-time-series.md) for temporal data
+11. Implement [MLOps](./ml/learn-mlops.md) practices for production
+12. Master [Data Science](./ml/learn-data-science.md) role and workflows
+13. Deepen [Python](./ml/learn-python-deep.md) programming skills
+14. Build [Agentic AI](./ai/learn-agentic-ai.md) systems with LangChain, LlamaIndex, and CrewAI
+15. Explore [Generative AI](./ai/learn-generative-ai.md) and [LLMs/RAG](./ai/learn-llms-rag.md)
 
 ## 🎯 Key Concepts Covered
 
@@ -330,6 +436,13 @@ python examples/05_text_classification_lstm.py
 - Memory and State Management
 - Agent Communication Patterns
 - Custom Agent Development
+
+### Mathematics Foundations
+- **Linear Algebra**: Vectors, matrices, eigenvalues, SVD, PCA
+- **Calculus**: Derivatives, gradients, chain rule, optimization
+- **Probability & Statistics**: Distributions, Bayes' theorem, MLE, hypothesis testing
+- **Optimization**: Gradient descent, adaptive methods, constrained optimization
+- **Information Theory**: Entropy, KL divergence, mutual information, cross-entropy
 
 ## 🛠️ Tools & Frameworks
 
