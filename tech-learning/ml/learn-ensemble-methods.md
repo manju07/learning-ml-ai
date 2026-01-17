@@ -1,21 +1,21 @@
 # Ensemble Methods: Complete Guide
 
 ## Table of Contents
-1. [Introduction to Ensemble Methods](#introduction)
+1. [Introduction to Ensemble Methods](#introduction-to-ensemble-methods)
 2. [Bagging](#bagging)
 3. [Boosting](#boosting)
 4. [Stacking](#stacking)
-5. [Voting Classifiers](#voting)
+5. [Voting Classifiers](#voting-classifiers)
 6. [XGBoost](#xgboost)
 7. [LightGBM](#lightgbm)
 8. [CatBoost](#catboost)
-9. [Advanced Ensemble Techniques](#advanced)
-10. [Practical Examples](#examples)
+9. [Advanced Ensemble Techniques](#advanced-ensemble-techniques)
+10. [Practical Examples](#practical-examples)
 11. [Best Practices](#best-practices)
 
 ---
 
-## Introduction to Ensemble Methods {#introduction}
+## Introduction to Ensemble Methods
 
 Ensemble methods combine multiple models to improve predictive performance. They often outperform individual models.
 
@@ -35,7 +35,7 @@ Ensemble methods combine multiple models to improve predictive performance. They
 
 ---
 
-## Bagging {#bagging}
+## Bagging
 
 ### Bootstrap Aggregating
 
@@ -122,7 +122,7 @@ et_clf.fit(X_train, y_train)
 
 ---
 
-## Boosting {#boosting}
+## Boosting
 
 ### AdaBoost
 
@@ -168,7 +168,7 @@ for i, y_pred in enumerate(gb_clf.staged_predict(X_test)):
 
 ---
 
-## XGBoost {#xgboost}
+## XGBoost
 
 ### Installation and Basic Usage
 
@@ -266,7 +266,7 @@ print(f"Best score: {grid_search.best_score_:.4f}")
 
 ---
 
-## LightGBM {#lightgbm}
+## LightGBM
 
 ### Basic Usage
 
@@ -333,7 +333,7 @@ predictions = model.predict(X_test, num_iteration=model.best_iteration)
 
 ---
 
-## CatBoost {#catboost}
+## CatBoost
 
 ### Basic Usage
 
@@ -367,7 +367,7 @@ probabilities = cat_clf.predict_proba(X_test)
 
 ---
 
-## Stacking {#stacking}
+## Stacking
 
 ### Manual Stacking
 
@@ -429,7 +429,7 @@ final_clf = StackingClassifier(
 
 ---
 
-## Voting Classifiers {#voting}
+## Voting Classifiers
 
 ### Hard Voting
 
@@ -470,7 +470,7 @@ probabilities = voting_clf_soft.predict_proba(X_test)
 
 ---
 
-## Advanced Ensemble Techniques {#advanced}
+## Advanced Ensemble Techniques
 
 ### Blending
 
@@ -530,7 +530,7 @@ def create_diverse_ensemble():
 
 ---
 
-## Practical Examples {#examples}
+## Practical Examples
 
 ### Example 1: Complete Ensemble Pipeline
 
@@ -599,7 +599,7 @@ meta_model.fit(meta_X, y_val)
 
 ---
 
-## Best Practices {#best-practices}
+## Best Practices
 
 1. **Diversity**: Use diverse models (different algorithms)
 2. **Quality**: Ensure base models are reasonably good

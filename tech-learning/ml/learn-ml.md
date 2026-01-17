@@ -1,20 +1,20 @@
 # Machine Learning: Concepts, Examples, and Deployment Guide
 
 ## Table of Contents
-1. [Introduction to Machine Learning](#introduction)
-2. [Types of Machine Learning](#types-of-ml)
+1. [Introduction to Machine Learning](#introduction-to-machine-learning)
+2. [Types of Machine Learning](#types-of-machine-learning)
 3. [Core Concepts](#core-concepts)
 4. [Data Preprocessing](#data-preprocessing)
-5. [Common Algorithms with Examples](#algorithms)
-6. [Model Building Workflow](#model-building)
-7. [Evaluation Metrics](#evaluation)
-8. [Deployment Strategies](#deployment)
+5. [Common Algorithms with Examples](#common-algorithms-with-examples)
+6. [Model Building Workflow](#model-building-workflow)
+7. [Evaluation Metrics](#evaluation-metrics)
+8. [Deployment Strategies](#deployment-strategies)
 9. [End-to-End Examples](#end-to-end-examples)
-10. [Tools and Frameworks](#tools)
+10. [Tools and Frameworks](#tools-and-frameworks)
 
 ---
 
-## Introduction to Machine Learning {#introduction}
+## Introduction to Machine Learning
 
 Machine Learning (ML) is a subset of artificial intelligence that enables systems to learn and improve from experience without being explicitly programmed. Instead of following pre-programmed instructions, ML algorithms build mathematical models based on training data to make predictions or decisions.
 
@@ -26,7 +26,7 @@ Machine Learning (ML) is a subset of artificial intelligence that enables system
 
 ---
 
-## Types of Machine Learning {#types-of-ml}
+## Types of Machine Learning
 
 ### 1. Supervised Learning
 **Definition**: Learning with labeled data. The algorithm learns from input-output pairs.
@@ -63,7 +63,7 @@ Machine Learning (ML) is a subset of artificial intelligence that enables system
 
 ---
 
-## Core Concepts {#core-concepts}
+## Core Concepts
 
 ### Features and Labels
 - **Features (X)**: Input variables used to make predictions
@@ -84,7 +84,7 @@ Machine Learning (ML) is a subset of artificial intelligence that enables system
 
 ---
 
-## Data Preprocessing {#data-preprocessing}
+## Data Preprocessing
 
 ### 1. Handling Missing Values
 
@@ -160,7 +160,7 @@ data['salary_per_year'] = data['salary'] / data['age']
 
 ---
 
-## Common Algorithms with Examples {#algorithms}
+## Common Algorithms with Examples
 
 ### 1. Linear Regression
 
@@ -378,7 +378,7 @@ plt.show()
 
 ---
 
-## Model Building Workflow {#model-building}
+## Model Building Workflow
 
 ### Complete Pipeline Example
 
@@ -431,7 +431,7 @@ print(f"Best CV Score: {grid_search.best_score_:.2f}")
 
 ---
 
-## Evaluation Metrics {#evaluation}
+## Evaluation Metrics
 
 ### Classification Metrics
 
@@ -488,7 +488,7 @@ print(f"R²: {r2:.2f}")
 
 ---
 
-## Deployment Strategies {#deployment}
+## Deployment Strategies
 
 ### 1. Model Serialization
 
@@ -714,7 +714,7 @@ with mlflow.start_run():
 
 ---
 
-## End-to-End Examples {#end-to-end-examples}
+## End-to-End Examples
 
 ### Example 1: Customer Churn Prediction
 
@@ -883,7 +883,7 @@ model.save('image_classifier.h5')
 
 ---
 
-## Tools and Frameworks {#tools}
+## Tools and Frameworks
 
 ### Python Libraries
 

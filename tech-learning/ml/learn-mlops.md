@@ -1,20 +1,20 @@
 # MLOps: Machine Learning Operations Guide
 
 ## Table of Contents
-1. [Introduction to MLOps](#introduction)
-2. [MLOps Lifecycle](#lifecycle)
+1. [Introduction to MLOps](#introduction-to-mlops)
+2. [MLOps Lifecycle](#mlops-lifecycle)
 3. [Version Control](#version-control)
-4. [CI/CD for ML](#cicd)
-5. [Model Monitoring](#monitoring)
-6. [Model Deployment](#deployment)
-7. [Infrastructure as Code](#iac)
+4. [CI/CD for ML](#cicd-for-ml)
+5. [Model Monitoring](#model-monitoring)
+6. [Model Deployment](#model-deployment)
+7. [Infrastructure as Code](#infrastructure-as-code)
 8. [Experiment Tracking](#experiment-tracking)
 9. [Model Registry](#model-registry)
 10. [Best Practices](#best-practices)
 
 ---
 
-## Introduction to MLOps {#introduction}
+## Introduction to MLOps
 
 MLOps (Machine Learning Operations) is the practice of deploying and maintaining ML models in production reliably and efficiently.
 
@@ -32,7 +32,7 @@ MLOps (Machine Learning Operations) is the practice of deploying and maintaining
 
 ---
 
-## MLOps Lifecycle {#lifecycle}
+## MLOps Lifecycle
 
 ### Stages
 
@@ -47,7 +47,7 @@ MLOps (Machine Learning Operations) is the practice of deploying and maintaining
 
 ---
 
-## Version Control {#version-control}
+## Version Control
 
 ### DVC (Data Version Control)
 
@@ -83,7 +83,7 @@ MLOps (Machine Learning Operations) is the practice of deploying and maintaining
 
 ---
 
-## CI/CD for ML {#cicd}
+## CI/CD for ML
 
 ### GitHub Actions Example
 
@@ -157,7 +157,7 @@ with mlflow.start_run():
 
 ---
 
-## Model Monitoring {#monitoring}
+## Model Monitoring
 
 ### Data Drift Detection
 
@@ -209,7 +209,7 @@ def check_model_performance(accuracy, threshold=0.8):
 
 ---
 
-## Model Deployment {#deployment}
+## Model Deployment
 
 ### Docker Container
 
@@ -285,7 +285,7 @@ for features in test_data:
 
 ---
 
-## Infrastructure as Code {#iac}
+## Infrastructure as Code
 
 ### Terraform Example
 
@@ -319,7 +319,7 @@ resource "aws_sagemaker_endpoint" "endpoint" {
 
 ---
 
-## Experiment Tracking {#experiment-tracking}
+## Experiment Tracking
 
 ### MLflow
 
@@ -374,7 +374,7 @@ wandb.log_model("model", model)
 
 ---
 
-## Model Registry {#model-registry}
+## Model Registry
 
 ### MLflow Model Registry
 
@@ -399,7 +399,7 @@ model = mlflow.pyfunc.load_model(
 
 ---
 
-## Best Practices {#best-practices}
+## Best Practices
 
 1. **Version Everything**: Code, data, models, configs
 2. **Automate Testing**: Unit tests, integration tests

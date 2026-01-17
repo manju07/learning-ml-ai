@@ -1,21 +1,21 @@
 # Reinforcement Learning: Complete Guide
 
 ## Table of Contents
-1. [Introduction to RL](#introduction)
-2. [RL Fundamentals](#fundamentals)
-3. [Markov Decision Process](#mdp)
-4. [Value-Based Methods](#value-based)
-5. [Policy-Based Methods](#policy-based)
-6. [Actor-Critic Methods](#actor-critic)
-7. [Deep Q-Networks (DQN)](#dqn)
+1. [Introduction to RL](#introduction-to-rl)
+2. [RL Fundamentals](#rl-fundamentals)
+3. [Markov Decision Process](#markov-decision-process)
+4. [Value-Based Methods](#value-based-methods)
+5. [Policy-Based Methods](#policy-based-methods)
+6. [Actor-Critic Methods](#actor-critic-methods)
+7. [Deep Q-Networks (DQN)](#deep-q-networks-dqn)
 8. [Policy Gradients](#policy-gradients)
-9. [Proximal Policy Optimization (PPO)](#ppo)
-10. [Practical Examples](#examples)
-11. [Advanced Topics](#advanced)
+9. [Proximal Policy Optimization (PPO)](#proximal-policy-optimization-ppo)
+10. [Practical Examples](#practical-examples)
+11. [Advanced Topics](#advanced-topics)
 
 ---
 
-## Introduction to RL {#introduction}
+## Introduction to RL
 
 Reinforcement Learning (RL) is a type of machine learning where an agent learns to make decisions by interacting with an environment, receiving rewards or penalties.
 
@@ -42,7 +42,7 @@ Reinforcement Learning (RL) is a type of machine learning where an agent learns 
 
 ---
 
-## RL Fundamentals {#fundamentals}
+## RL Fundamentals
 
 ### Basic Concepts
 
@@ -86,7 +86,7 @@ print(f"Selected action: {action}")
 
 ---
 
-## Markov Decision Process {#mdp}
+## Markov Decision Process
 
 ### MDP Components
 
@@ -138,7 +138,7 @@ def value_iteration(mdp, theta=1e-6):
 
 ---
 
-## Value-Based Methods {#value-based}
+## Value-Based Methods
 
 ### Q-Learning
 
@@ -222,7 +222,7 @@ class SARSA:
 
 ---
 
-## Policy-Based Methods {#policy-based}
+## Policy-Based Methods
 
 ### Policy Gradient
 
@@ -295,7 +295,7 @@ class PolicyGradient:
 
 ---
 
-## Actor-Critic Methods {#actor-critic}
+## Actor-Critic Methods
 
 ### Actor-Critic Implementation
 
@@ -367,7 +367,7 @@ class ActorCritic:
 
 ---
 
-## Deep Q-Networks (DQN) {#dqn}
+## Deep Q-Networks (DQN)
 
 ### DQN Implementation
 
@@ -456,7 +456,7 @@ class DQN:
 
 ---
 
-## Proximal Policy Optimization (PPO) {#ppo}
+## Proximal Policy Optimization (PPO)
 
 ### PPO Implementation
 
@@ -558,7 +558,7 @@ class PPO:
 
 ---
 
-## Practical Examples {#examples}
+## Practical Examples
 
 ### Example 1: CartPole with DQN
 
@@ -637,7 +637,7 @@ for episode in range(1000):
 
 ---
 
-## Advanced Topics {#advanced}
+## Advanced Topics
 
 ### Prioritized Experience Replay
 

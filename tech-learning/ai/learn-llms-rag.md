@@ -1,22 +1,22 @@
 # Large Language Models (LLMs) and RAG: Complete Guide
 
 ## Table of Contents
-1. [Introduction to LLMs](#introduction)
+1. [Introduction to LLMs](#introduction-to-llms)
 2. [Prompt Engineering](#prompt-engineering)
-3. [Fine-tuning LLMs](#fine-tuning)
-4. [Retrieval Augmented Generation (RAG)](#rag)
+3. [Fine-tuning LLMs](#fine-tuning-llms)
+4. [Retrieval Augmented Generation (RAG)](#retrieval-augmented-generation-rag)
 5. [RAG Architecture](#rag-architecture)
 6. [Vector Databases](#vector-databases)
 7. [Embeddings](#embeddings)
-8. [Chunking Strategies](#chunking)
+8. [Chunking Strategies](#chunking-strategies)
 9. [RAG Implementation](#rag-implementation)
-10. [Advanced RAG Techniques](#advanced-rag)
-11. [Practical Examples](#examples)
+10. [Advanced RAG Techniques](#advanced-rag-techniques)
+11. [Practical Examples](#practical-examples)
 12. [Best Practices](#best-practices)
 
 ---
 
-## Introduction to LLMs {#introduction}
+## Introduction to LLMs
 
 Large Language Models (LLMs) are transformer-based models trained on vast amounts of text data. They can understand and generate human-like text.
 
@@ -40,7 +40,7 @@ Large Language Models (LLMs) are transformer-based models trained on vast amount
 
 ---
 
-## Prompt Engineering {#prompt-engineering}
+## Prompt Engineering
 
 ### Basic Prompting
 
@@ -140,7 +140,7 @@ user_prompt = user_template.format(
 
 ---
 
-## Fine-tuning LLMs {#fine-tuning}
+## Fine-tuning LLMs
 
 ### Fine-tuning with OpenAI
 
@@ -241,7 +241,7 @@ trainer.train()
 
 ---
 
-## Retrieval Augmented Generation (RAG) {#rag}
+## Retrieval Augmented Generation (RAG)
 
 ### What is RAG?
 
@@ -257,7 +257,7 @@ RAG combines retrieval (finding relevant information) with generation (creating 
 
 ---
 
-## RAG Architecture {#rag-architecture}
+## RAG Architecture
 
 ### Basic RAG Pipeline
 
@@ -307,7 +307,7 @@ class RAGPipeline:
 
 ---
 
-## Vector Databases {#vector-databases}
+## Vector Databases
 
 ### ChromaDB
 
@@ -389,7 +389,7 @@ results = [vectors[i] for i in indices[0]]
 
 ---
 
-## Embeddings {#embeddings}
+## Embeddings
 
 ### OpenAI Embeddings
 
@@ -440,7 +440,7 @@ print(f"Most similar: {texts[most_similar_idx]}")
 
 ---
 
-## Chunking Strategies {#chunking}
+## Chunking Strategies
 
 ### Text Splitting
 
@@ -485,7 +485,7 @@ chunks = semantic_splitter.create_documents([long_text])
 
 ---
 
-## RAG Implementation {#rag-implementation}
+## RAG Implementation
 
 ### Complete RAG System
 
@@ -563,7 +563,7 @@ while True:
 
 ---
 
-## Advanced RAG Techniques {#advanced-rag}
+## Advanced RAG Techniques
 
 ### Re-ranking
 
@@ -654,7 +654,7 @@ class ParentChildChunker:
 
 ---
 
-## Practical Examples {#examples}
+## Practical Examples
 
 ### Example 1: Document Q&A System
 
@@ -706,7 +706,7 @@ answer = qa_chain.run("How does the authentication work?")
 
 ---
 
-## Best Practices {#best-practices}
+## Best Practices
 
 1. **Chunk Size**: 500-1000 tokens typically works well
 2. **Overlap**: 10-20% overlap between chunks

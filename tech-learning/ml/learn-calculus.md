@@ -2,20 +2,20 @@
 
 ## Table of Contents
 1. [Introduction](#introduction)
-2. [Functions and Limits](#functions-limits)
+2. [Functions and Limits](#functions-and-limits)
 3. [Derivatives](#derivatives)
-4. [Partial Derivatives and Gradients](#gradients)
+4. [Partial Derivatives and Gradients](#partial-derivatives-and-gradients)
 5. [Chain Rule](#chain-rule)
-6. [Higher-Order Derivatives](#higher-order)
+6. [Higher-Order Derivatives](#higher-order-derivatives)
 7. [Optimization](#optimization)
 8. [Constrained Optimization](#constrained-optimization)
 9. [Integration](#integration)
-10. [Applications in ML/DL](#applications)
-11. [Practical Examples](#examples)
+10. [Applications in ML/DL](#applications-in-mldl)
+11. [Practical Examples](#practical-examples)
 
 ---
 
-## Introduction {#introduction}
+## Introduction
 
 Calculus is essential for understanding and implementing machine learning and deep learning algorithms. It provides the mathematical foundation for:
 - **Optimization**: Finding optimal model parameters
@@ -32,7 +32,7 @@ Calculus is essential for understanding and implementing machine learning and de
 
 ---
 
-## Functions and Limits {#functions-limits}
+## Functions and Limits
 
 ### Functions
 A function f maps inputs x to outputs f(x).
@@ -106,7 +106,7 @@ plt.show()
 
 ---
 
-## Derivatives {#derivatives}
+## Derivatives
 
 ### Definition
 The derivative measures the rate of change of a function:
@@ -297,7 +297,7 @@ quotient_rule_example()
 
 ---
 
-## Partial Derivatives and Gradients {#gradients}
+## Partial Derivatives and Gradients
 
 ### Partial Derivatives
 For functions of multiple variables, partial derivatives measure change w.r.t. one variable.
@@ -397,7 +397,7 @@ print(f"Analytical gradient: {2*x}")
 
 ---
 
-## Chain Rule {#chain-rule}
+## Chain Rule
 
 The chain rule is fundamental for backpropagation in neural networks.
 
@@ -471,7 +471,7 @@ multivariable_chain_rule()
 
 ---
 
-## Higher-Order Derivatives {#higher-order}
+## Higher-Order Derivatives
 
 ### Second Derivative
 ```python
@@ -547,7 +547,7 @@ print(f"Positive definite: {np.all(eigenvals > 0)}")  # Convex function
 
 ---
 
-## Optimization {#optimization}
+## Optimization
 
 ### Critical Points
 Points where gradient is zero (local minima, maxima, or saddle points).
@@ -684,7 +684,7 @@ plt.show()
 
 ---
 
-## Constrained Optimization {#constrained-optimization}
+## Constrained Optimization
 
 ### Lagrange Multipliers
 For optimizing f(x, y) subject to g(x, y) = 0.
@@ -709,7 +709,7 @@ print(f"Constraint satisfied: {constraint(result.x):.6f}")
 
 ---
 
-## Integration {#integration}
+## Integration
 
 ### Definite Integral
 ```python
@@ -743,7 +743,7 @@ print(f"True value: 2/3 = {2/3:.6f}")
 
 ---
 
-## Applications in ML/DL {#applications}
+## Applications in ML/DL
 
 ### 1. Loss Function Derivatives
 ```python
@@ -848,7 +848,7 @@ print(f"Weight gradients computed using chain rule")
 
 ---
 
-## Practical Examples {#examples}
+## Practical Examples
 
 ### Example 1: Linear Regression from Scratch
 ```python

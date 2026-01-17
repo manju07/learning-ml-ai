@@ -1,21 +1,21 @@
 # Hyperparameter Tuning: Complete Guide
 
 ## Table of Contents
-1. [Introduction to Hyperparameter Tuning](#introduction)
+1. [Introduction to Hyperparameter Tuning](#introduction-to-hyperparameter-tuning)
 2. [Grid Search](#grid-search)
 3. [Random Search](#random-search)
-4. [Bayesian Optimization](#bayesian)
-5. [Optuna Framework](#optuna)
-6. [Hyperopt Framework](#hyperopt)
+4. [Bayesian Optimization](#bayesian-optimization)
+5. [Optuna Framework](#optuna-framework)
+6. [Hyperopt Framework](#hyperopt-framework)
 7. [Ray Tune](#ray-tune)
-8. [Automated ML (AutoML)](#automl)
-9. [Early Stopping Strategies](#early-stopping)
-10. [Practical Examples](#examples)
+8. [Automated ML (AutoML)](#automated-ml-automl)
+9. [Early Stopping Strategies](#early-stopping-strategies)
+10. [Practical Examples](#practical-examples)
 11. [Best Practices](#best-practices)
 
 ---
 
-## Introduction to Hyperparameter Tuning {#introduction}
+## Introduction to Hyperparameter Tuning
 
 Hyperparameter tuning optimizes model performance by finding the best hyperparameter values. Unlike model parameters (learned during training), hyperparameters are set before training.
 
@@ -39,7 +39,7 @@ Hyperparameter tuning optimizes model performance by finding the best hyperparam
 
 ---
 
-## Grid Search {#grid-search}
+## Grid Search
 
 ### Basic Grid Search
 
@@ -115,7 +115,7 @@ grid_search.fit(X_train, y_train)
 
 ---
 
-## Random Search {#random-search}
+## Random Search
 
 ### Basic Random Search
 
@@ -172,7 +172,7 @@ random_search = RandomizedSearchCV(
 
 ---
 
-## Bayesian Optimization {#bayesian}
+## Bayesian Optimization
 
 ### Using scikit-optimize
 
@@ -224,7 +224,7 @@ print(f"Best score: {-result.fun:.4f}")
 
 ---
 
-## Optuna Framework {#optuna}
+## Optuna Framework
 
 ### Installation
 
@@ -352,7 +352,7 @@ study.optimize(objective_deep_learning, n_trials=50)
 
 ---
 
-## Hyperopt Framework {#hyperopt}
+## Hyperopt Framework
 
 ### Installation
 
@@ -401,7 +401,7 @@ print(f"Best parameters: {best}")
 
 ---
 
-## Ray Tune {#ray-tune}
+## Ray Tune
 
 ### Installation
 
@@ -454,7 +454,7 @@ print(f"Best config: {best_config}")
 
 ---
 
-## Automated ML (AutoML) {#automl}
+## Automated ML (AutoML)
 
 ### Auto-sklearn
 
@@ -514,7 +514,7 @@ predictions = tpot.predict(X_test)
 
 ---
 
-## Early Stopping Strategies {#early-stopping}
+## Early Stopping Strategies
 
 ### Learning Curve Analysis
 
@@ -547,7 +547,7 @@ plot_learning_curve(model, X_train, y_train)
 
 ---
 
-## Practical Examples {#examples}
+## Practical Examples
 
 ### Example 1: Complete Tuning Pipeline
 
@@ -647,7 +647,7 @@ def tune_multiple_models(X_train, y_train):
 
 ---
 
-## Best Practices {#best-practices}
+## Best Practices
 
 1. **Start Simple**: Begin with grid/random search
 2. **Use Cross-Validation**: Avoid overfitting to validation set

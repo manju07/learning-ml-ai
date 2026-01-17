@@ -1,20 +1,20 @@
 # Generative AI: Complete Guide
 
 ## Table of Contents
-1. [Introduction to Generative AI](#introduction)
-2. [Generative Adversarial Networks (GANs)](#gans)
-3. [Variational Autoencoders (VAEs)](#vaes)
-4. [Diffusion Models](#diffusion)
+1. [Introduction to Generative AI](#introduction-to-generative-ai)
+2. [Generative Adversarial Networks (GANs)](#generative-adversarial-networks-gans)
+3. [Variational Autoencoders (VAEs)](#variational-autoencoders-vaes)
+4. [Diffusion Models](#diffusion-models)
 5. [Stable Diffusion](#stable-diffusion)
-6. [Transformer-based Generators](#transformer-generators)
-7. [Text-to-Image Models](#text-to-image)
-8. [Image-to-Image Translation](#image-to-image)
-9. [Practical Examples](#examples)
+6. [Transformer-based Generators](#transformer-based-generators)
+7. [Text-to-Image Models](#text-to-image-models)
+8. [Image-to-Image Translation](#image-to-image-translation)
+9. [Practical Examples](#practical-examples)
 10. [Best Practices](#best-practices)
 
 ---
 
-## Introduction to Generative AI {#introduction}
+## Introduction to Generative AI
 
 Generative AI creates new content (images, text, audio, video) that resembles training data. Unlike discriminative models that classify, generative models learn the data distribution.
 
@@ -37,7 +37,7 @@ Generative AI creates new content (images, text, audio, video) that resembles tr
 
 ---
 
-## Generative Adversarial Networks (GANs) {#gans}
+## Generative Adversarial Networks (GANs)
 
 ### GAN Architecture
 
@@ -182,7 +182,7 @@ class DCGAN_Generator(keras.Model):
 
 ---
 
-## Variational Autoencoders (VAEs) {#vaes}
+## Variational Autoencoders (VAEs)
 
 ### VAE Architecture
 
@@ -254,7 +254,7 @@ def vae_loss(x, reconstructed, z_mean, z_log_var):
 
 ---
 
-## Diffusion Models {#diffusion}
+## Diffusion Models
 
 ### Denoising Diffusion Probabilistic Model (DDPM)
 
@@ -378,7 +378,7 @@ class DiffusionTrainer:
 
 ---
 
-## Stable Diffusion {#stable-diffusion}
+## Stable Diffusion
 
 ### Using Stable Diffusion
 
@@ -443,7 +443,7 @@ unet = UNet2DConditionModel.from_pretrained(model_id, subfolder="unet")
 
 ---
 
-## Transformer-based Generators {#transformer-generators}
+## Transformer-based Generators
 
 ### GPT-style Text Generation
 
@@ -489,7 +489,7 @@ image_url = response['data'][0]['url']
 
 ---
 
-## Text-to-Image Models {#text-to-image}
+## Text-to-Image Models
 
 ### Using Hugging Face Diffusers
 
@@ -539,7 +539,7 @@ output = pipe(
 
 ---
 
-## Image-to-Image Translation {#image-to-image}
+## Image-to-Image Translation
 
 ### CycleGAN
 
@@ -585,7 +585,7 @@ stylized_image = hub_module(tf.constant(content_image), tf.constant(style_image)
 
 ---
 
-## Practical Examples {#examples}
+## Practical Examples
 
 ### Example 1: Generate Faces with GAN
 
@@ -629,7 +629,7 @@ for prompt in prompts:
 
 ---
 
-## Best Practices {#best-practices}
+## Best Practices
 
 1. **Start with Pre-trained Models**: Use Stable Diffusion, GPT, etc.
 2. **Monitor Training**: Track losses, use TensorBoard

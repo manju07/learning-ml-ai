@@ -1,23 +1,23 @@
 # Data Science: Complete Guide
 
 ## Table of Contents
-1. [Introduction to Data Science](#introduction)
-2. [Data Science Role and Responsibilities](#role)
-3. [Data Science Workflow](#workflow)
-4. [Essential Skills](#skills)
-5. [Data Collection and Acquisition](#data-collection)
-6. [Data Exploration and Analysis](#exploration)
+1. [Introduction to Data Science](#introduction-to-data-science)
+2. [Data Science Role and Responsibilities](#data-science-role-and-responsibilities)
+3. [Data Science Workflow](#data-science-workflow)
+4. [Essential Skills](#essential-skills)
+5. [Data Collection and Acquisition](#data-collection-and-acquisition)
+6. [Data Exploration and Analysis](#data-exploration-and-analysis)
 7. [Feature Engineering](#feature-engineering)
-8. [Statistical Analysis](#statistics)
-9. [Data Visualization](#visualization)
+8. [Statistical Analysis](#statistical-analysis)
+9. [Data Visualization](#data-visualization)
 10. [Model Development](#model-development)
-11. [Communication and Storytelling](#communication)
-12. [Tools and Technologies](#tools)
+11. [Communication and Storytelling](#communication-and-storytelling)
+12. [Tools and Technologies](#tools-and-technologies)
 13. [Best Practices](#best-practices)
 
 ---
 
-## Introduction to Data Science {#introduction}
+## Introduction to Data Science
 
 Data Science is an interdisciplinary field that uses scientific methods, processes, algorithms, and systems to extract knowledge and insights from structured and unstructured data.
 
@@ -39,7 +39,7 @@ Data Science combines:
 
 ---
 
-## Data Science Role and Responsibilities {#role}
+## Data Science Role and Responsibilities
 
 ### Core Responsibilities
 
@@ -99,7 +99,7 @@ daily_tasks = {
 
 ---
 
-## Data Science Workflow {#workflow}
+## Data Science Workflow
 
 ### CRISP-DM Methodology
 
@@ -162,7 +162,7 @@ data-science-project/
 
 ---
 
-## Essential Skills {#skills}
+## Essential Skills
 
 ### Technical Skills
 
@@ -206,7 +206,7 @@ data-science-project/
 
 ---
 
-## Data Collection and Acquisition {#data-collection}
+## Data Collection and Acquisition
 
 ### Data Sources
 
@@ -271,7 +271,7 @@ print(report)
 
 ---
 
-## Data Exploration and Analysis {#exploration}
+## Data Exploration and Analysis
 
 ### Exploratory Data Analysis (EDA)
 
@@ -346,7 +346,7 @@ print(f"Correlation: {corr}, P-value: {p_value}")
 
 ---
 
-## Feature Engineering {#feature-engineering}
+## Feature Engineering
 
 ### Creating Features
 
@@ -414,7 +414,7 @@ feature_importance = pd.DataFrame({
 
 ---
 
-## Statistical Analysis {#statistics}
+## Statistical Analysis
 
 ### Descriptive Statistics
 
@@ -470,7 +470,7 @@ print(f"T-statistic: {t_stat}, P-value: {p_value}")
 
 ---
 
-## Data Visualization {#visualization}
+## Data Visualization
 
 ### Effective Visualizations
 
@@ -547,7 +547,7 @@ fig.show()
 
 ---
 
-## Model Development {#model-development}
+## Model Development
 
 ### Model Selection Framework
 
@@ -601,7 +601,7 @@ shap.summary_plot(shap_values, X_test, plot_type="bar")
 
 ---
 
-## Communication and Storytelling {#communication}
+## Communication and Storytelling
 
 ### Creating Reports
 
@@ -638,7 +638,7 @@ create_report("Data Analysis Report", report_sections)
 
 ---
 
-## Tools and Technologies {#tools}
+## Tools and Technologies
 
 ### Essential Tools
 
@@ -695,7 +695,7 @@ pip install plotly dash
 
 ---
 
-## Best Practices {#best-practices}
+## Best Practices
 
 ### Code Organization
 

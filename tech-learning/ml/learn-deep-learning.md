@@ -1,20 +1,20 @@
 # Deep Learning: Complete Guide with Examples
 
 ## Table of Contents
-1. [Introduction to Deep Learning](#introduction)
-2. [Neural Networks Fundamentals](#neural-networks)
+1. [Introduction to Deep Learning](#introduction-to-deep-learning)
+2. [Neural Networks Fundamentals](#neural-networks-fundamentals)
 3. [Activation Functions](#activation-functions)
 4. [Backpropagation](#backpropagation)
-5. [Optimization Algorithms](#optimization)
-6. [Regularization Techniques](#regularization)
+5. [Optimization Algorithms](#optimization-algorithms)
+6. [Regularization Techniques](#regularization-techniques)
 7. [Architectures](#architectures)
 8. [Transfer Learning](#transfer-learning)
-9. [Practical Examples](#examples)
-10. [Tools and Frameworks](#tools)
+9. [Practical Examples](#practical-examples)
+10. [Tools and Frameworks](#tools-and-frameworks)
 
 ---
 
-## Introduction to Deep Learning {#introduction}
+## Introduction to Deep Learning
 
 Deep Learning is a subset of machine learning that uses neural networks with multiple layers (hence "deep") to learn hierarchical representations of data. Unlike traditional ML, deep learning can automatically discover features from raw data.
 
@@ -35,7 +35,7 @@ Deep Learning is a subset of machine learning that uses neural networks with mul
 
 ---
 
-## Neural Networks Fundamentals {#neural-networks}
+## Neural Networks Fundamentals
 
 ### Perceptron: The Building Block
 
@@ -128,7 +128,7 @@ print(f"Test Accuracy: {test_accuracy:.2f}")
 
 ---
 
-## Activation Functions {#activation-functions}
+## Activation Functions
 
 Activation functions introduce non-linearity into neural networks, enabling them to learn complex patterns.
 
@@ -230,7 +230,7 @@ for act, acc in results.items():
 
 ---
 
-## Backpropagation {#backpropagation}
+## Backpropagation
 
 Backpropagation is the algorithm used to train neural networks by computing gradients and updating weights.
 
@@ -308,7 +308,7 @@ print(predictions)
 
 ---
 
-## Optimization Algorithms {#optimization}
+## Optimization Algorithms
 
 ### Gradient Descent Variants
 
@@ -436,7 +436,7 @@ model.compile(optimizer=adam_optimizer, loss='categorical_crossentropy', metrics
 
 ---
 
-## Regularization Techniques {#regularization}
+## Regularization Techniques
 
 ### 1. Dropout
 
@@ -524,7 +524,7 @@ train_generator = datagen.flow_from_directory(
 
 ---
 
-## Architectures {#architectures}
+## Architectures
 
 ### 1. Feedforward Neural Network
 
@@ -641,7 +641,7 @@ def vae_loss(x, reconstructed, z_mean, z_log_var):
 
 ---
 
-## Transfer Learning {#transfer-learning}
+## Transfer Learning
 
 ### Using Pre-trained Models
 
@@ -696,7 +696,7 @@ model.compile(
 
 ---
 
-## Practical Examples {#examples}
+## Practical Examples
 
 ### Example 1: Handwritten Digit Recognition (MNIST)
 
@@ -780,7 +780,7 @@ model.fit(padded_sequences, labels, epochs=10, validation_split=0.2)
 
 ---
 
-## Tools and Frameworks {#tools}
+## Tools and Frameworks
 
 ### TensorFlow/Keras
 

@@ -1,22 +1,22 @@
 # Natural Language Processing (NLP) and Transformers: Complete Guide
 
 ## Table of Contents
-1. [Introduction to NLP](#introduction)
+1. [Introduction to NLP](#introduction-to-nlp)
 2. [Text Preprocessing](#text-preprocessing)
-3. [Traditional NLP Methods](#traditional-nlp)
+3. [Traditional NLP Methods](#traditional-nlp-methods)
 4. [Word Embeddings](#word-embeddings)
-5. [Recurrent Neural Networks for NLP](#rnn-nlp)
-6. [Attention Mechanism](#attention)
-7. [Transformers Architecture](#transformers)
-8. [BERT and Variants](#bert)
-9. [GPT and Language Models](#gpt)
-10. [Fine-tuning Pre-trained Models](#fine-tuning)
-11. [Practical Examples](#examples)
-12. [Advanced Topics](#advanced)
+5. [Recurrent Neural Networks for NLP](#recurrent-neural-networks-for-nlp)
+6. [Attention Mechanism](#attention-mechanism)
+7. [Transformers Architecture](#transformers-architecture)
+8. [BERT and Variants](#bert-and-variants)
+9. [GPT and Language Models](#gpt-and-language-models)
+10. [Fine-tuning Pre-trained Models](#fine-tuning-pre-trained-models)
+11. [Practical Examples](#practical-examples)
+12. [Advanced Topics](#advanced-topics)
 
 ---
 
-## Introduction to NLP {#introduction}
+## Introduction to NLP
 
 Natural Language Processing (NLP) is a branch of AI that helps computers understand, interpret, and manipulate human language. Modern NLP is dominated by transformer-based models.
 
@@ -37,7 +37,7 @@ Natural Language Processing (NLP) is a branch of AI that helps computers underst
 
 ---
 
-## Text Preprocessing {#text-preprocessing}
+## Text Preprocessing
 
 ### Basic Preprocessing
 
@@ -121,7 +121,7 @@ def advanced_preprocess(text):
 
 ---
 
-## Traditional NLP Methods {#traditional-nlp}
+## Traditional NLP Methods
 
 ### Bag of Words (BoW)
 
@@ -170,7 +170,7 @@ print(f"Trigrams: {trigrams}")
 
 ---
 
-## Word Embeddings {#word-embeddings}
+## Word Embeddings
 
 ### Word2Vec
 
@@ -228,7 +228,7 @@ vector = model.wv['unseenword']
 
 ---
 
-## Recurrent Neural Networks for NLP {#rnn-nlp}
+## Recurrent Neural Networks for NLP
 
 ### LSTM for Text Classification
 
@@ -272,7 +272,7 @@ model = keras.Sequential([
 
 ---
 
-## Attention Mechanism {#attention}
+## Attention Mechanism
 
 ### Self-Attention Implementation
 
@@ -328,7 +328,7 @@ class MultiHeadAttention(layers.Layer):
 
 ---
 
-## Transformers Architecture {#transformers}
+## Transformers Architecture
 
 ### Transformer Encoder Block
 
@@ -410,7 +410,7 @@ class TransformerEncoder(layers.Layer):
 
 ---
 
-## BERT and Variants {#bert}
+## BERT and Variants
 
 ### Using BERT with Transformers Library
 
@@ -491,7 +491,7 @@ albert_model = TFAlbertModel.from_pretrained('albert-base-v2')
 
 ---
 
-## GPT and Language Models {#gpt}
+## GPT and Language Models
 
 ### Using GPT-2
 
@@ -546,7 +546,7 @@ print(story)
 
 ---
 
-## Fine-tuning Pre-trained Models {#fine-tuning}
+## Fine-tuning Pre-trained Models
 
 ### Fine-tuning BERT for Sentiment Analysis
 
@@ -642,7 +642,7 @@ trainer.train()
 
 ---
 
-## Practical Examples {#examples}
+## Practical Examples
 
 ### Example 1: Sentiment Analysis with BERT
 
@@ -718,7 +718,7 @@ print(f"Summary: {summary[0]['summary_text']}")
 
 ---
 
-## Advanced Topics {#advanced}
+## Advanced Topics
 
 ### Transfer Learning Strategies
 

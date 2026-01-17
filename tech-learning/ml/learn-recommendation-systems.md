@@ -1,20 +1,20 @@
 # Recommendation Systems: Complete Guide
 
 ## Table of Contents
-1. [Introduction to Recommendation Systems](#introduction)
-2. [Collaborative Filtering](#collaborative)
-3. [Content-Based Filtering](#content-based)
-4. [Hybrid Methods](#hybrid)
+1. [Introduction to Recommendation Systems](#introduction-to-recommendation-systems)
+2. [Collaborative Filtering](#collaborative-filtering)
+3. [Content-Based Filtering](#content-based-filtering)
+4. [Hybrid Methods](#hybrid-methods)
 5. [Matrix Factorization](#matrix-factorization)
-6. [Deep Learning for Recommendations](#deep-learning)
-7. [Evaluation Metrics](#metrics)
-8. [Cold Start Problem](#cold-start)
-9. [Practical Examples](#examples)
+6. [Deep Learning for Recommendations](#deep-learning-for-recommendations)
+7. [Evaluation Metrics](#evaluation-metrics)
+8. [Cold Start Problem](#cold-start-problem)
+9. [Practical Examples](#practical-examples)
 10. [Best Practices](#best-practices)
 
 ---
 
-## Introduction to Recommendation Systems {#introduction}
+## Introduction to Recommendation Systems
 
 Recommendation systems predict user preferences and suggest items they might like. They're used by Netflix, Amazon, Spotify, and many other platforms.
 
@@ -36,7 +36,7 @@ Recommendation systems predict user preferences and suggest items they might lik
 
 ---
 
-## Collaborative Filtering {#collaborative}
+## Collaborative Filtering
 
 ### User-Based Collaborative Filtering
 
@@ -163,7 +163,7 @@ class ItemBasedCF:
 
 ---
 
-## Content-Based Filtering {#content-based}
+## Content-Based Filtering
 
 ### TF-IDF Based Recommendations
 
@@ -229,7 +229,7 @@ class FeatureBasedRecommender:
 
 ---
 
-## Hybrid Methods {#hybrid}
+## Hybrid Methods
 
 ### Weighted Hybrid
 
@@ -276,7 +276,7 @@ class HybridRecommender:
 
 ---
 
-## Matrix Factorization {#matrix-factorization}
+## Matrix Factorization
 
 ### SVD (Singular Value Decomposition)
 
@@ -334,7 +334,7 @@ class NMFRecommender:
 
 ---
 
-## Deep Learning for Recommendations {#deep-learning}
+## Deep Learning for Recommendations
 
 ### Neural Collaborative Filtering
 
@@ -426,7 +426,7 @@ def create_wide_deep_model(num_users, num_items, num_features):
 
 ---
 
-## Evaluation Metrics {#metrics}
+## Evaluation Metrics
 
 ### Precision@K and Recall@K
 
@@ -520,7 +520,7 @@ def ndcg(y_true, y_pred, k=10):
 
 ---
 
-## Cold Start Problem {#cold-start}
+## Cold Start Problem
 
 ### New User Cold Start
 
@@ -551,7 +551,7 @@ def recommend_new_item(item_features, content_model, n_users=10):
 
 ---
 
-## Practical Examples {#examples}
+## Practical Examples
 
 ### Example 1: Movie Recommendation System
 
@@ -628,7 +628,7 @@ class ProductRecommender:
 
 ---
 
-## Best Practices {#best-practices}
+## Best Practices
 
 1. **Handle Cold Start**: Use content-based for new users/items
 2. **Diversity**: Ensure recommendations are diverse

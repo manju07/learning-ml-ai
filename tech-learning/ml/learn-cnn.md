@@ -1,20 +1,20 @@
 # Convolutional Neural Networks (CNN): Complete Guide
 
 ## Table of Contents
-1. [Introduction to CNNs](#introduction)
-2. [CNN Fundamentals](#fundamentals)
+1. [Introduction to CNNs](#introduction-to-cnns)
+2. [CNN Fundamentals](#cnn-fundamentals)
 3. [Convolutional Layers](#convolutional-layers)
 4. [Pooling Layers](#pooling-layers)
-5. [CNN Architectures](#architectures)
-6. [Transfer Learning with CNNs](#transfer-learning)
+5. [CNN Architectures](#cnn-architectures)
+6. [Transfer Learning with CNNs](#transfer-learning-with-cnns)
 7. [Object Detection](#object-detection)
-8. [Image Segmentation](#segmentation)
-9. [Practical Examples](#examples)
-10. [Advanced Topics](#advanced)
+8. [Image Segmentation](#image-segmentation)
+9. [Practical Examples](#practical-examples)
+10. [Advanced Topics](#advanced-topics)
 
 ---
 
-## Introduction to CNNs {#introduction}
+## Introduction to CNNs
 
 Convolutional Neural Networks (CNNs) are specialized deep learning architectures designed for processing grid-like data such as images. They use convolutional operations to automatically learn spatial hierarchies of features.
 
@@ -35,7 +35,7 @@ Convolutional Neural Networks (CNNs) are specialized deep learning architectures
 
 ---
 
-## CNN Fundamentals {#fundamentals}
+## CNN Fundamentals
 
 ### Basic CNN Structure
 
@@ -117,7 +117,7 @@ print(output.numpy().squeeze())
 
 ---
 
-## Convolutional Layers {#convolutional-layers}
+## Convolutional Layers
 
 ### Basic Convolutional Layer
 
@@ -194,7 +194,7 @@ dilated_conv = layers.Conv2D(
 
 ---
 
-## Pooling Layers {#pooling-layers}
+## Pooling Layers
 
 ### Max Pooling
 
@@ -248,7 +248,7 @@ model = Sequential([
 
 ---
 
-## CNN Architectures {#architectures}
+## CNN Architectures
 
 ### 1. LeNet-5 (Classic Architecture)
 
@@ -428,7 +428,7 @@ def inception_module(x, filters_1x1, filters_3x3_reduce, filters_3x3,
 
 ---
 
-## Transfer Learning with CNNs {#transfer-learning}
+## Transfer Learning with CNNs
 
 ### Using Pre-trained Models
 
@@ -500,7 +500,7 @@ def fine_tune_model(base_model_name='VGG16', num_classes=10):
 
 ---
 
-## Object Detection {#object-detection}
+## Object Detection
 
 ### YOLO (You Only Look Once) - Simplified
 
@@ -551,7 +551,7 @@ detections = detector(image)
 
 ---
 
-## Image Segmentation {#segmentation}
+## Image Segmentation
 
 ### U-Net Architecture
 
@@ -630,7 +630,7 @@ def create_fcn(input_shape=(224, 224, 3), num_classes=21):
 
 ---
 
-## Practical Examples {#examples}
+## Practical Examples
 
 ### Example 1: CIFAR-10 Classification
 
@@ -757,7 +757,7 @@ model.fit(train_generator, epochs=10)
 
 ---
 
-## Advanced Topics {#advanced}
+## Advanced Topics
 
 ### Attention Mechanisms
 

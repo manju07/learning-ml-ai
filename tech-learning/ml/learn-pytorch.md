@@ -1,21 +1,21 @@
 # PyTorch: Complete Guide with Examples
 
 ## Table of Contents
-1. [Introduction to PyTorch](#introduction)
-2. [Tensors and Operations](#tensors)
-3. [Automatic Differentiation](#autograd)
-4. [Building Neural Networks](#neural-networks)
-5. [Training Models](#training)
+1. [Introduction to PyTorch](#introduction-to-pytorch)
+2. [Tensors and Operations](#tensors-and-operations)
+3. [Automatic Differentiation](#automatic-differentiation)
+4. [Building Neural Networks](#building-neural-networks)
+5. [Training Models](#training-models)
 6. [Data Loading](#data-loading)
 7. [Transfer Learning](#transfer-learning)
 8. [Custom Modules](#custom-modules)
-9. [Distributed Training](#distributed)
-10. [Model Deployment](#deployment)
-11. [Practical Examples](#examples)
+9. [Distributed Training](#distributed-training)
+10. [Model Deployment](#model-deployment)
+11. [Practical Examples](#practical-examples)
 
 ---
 
-## Introduction to PyTorch {#introduction}
+## Introduction to PyTorch
 
 PyTorch is a deep learning framework developed by Facebook. It's known for its dynamic computation graphs and Pythonic API.
 
@@ -41,7 +41,7 @@ python -c "import torch; print(torch.__version__); print(torch.cuda.is_available
 
 ---
 
-## Tensors and Operations {#tensors}
+## Tensors and Operations
 
 ### Creating Tensors
 
@@ -111,7 +111,7 @@ cat = torch.cat([a, b], dim=1)  # Horizontal
 
 ---
 
-## Automatic Differentiation {#autograd}
+## Automatic Differentiation
 
 ### Autograd Basics
 
@@ -152,7 +152,7 @@ print(f"Gradient: {x.grad}")
 
 ---
 
-## Building Neural Networks {#neural-networks}
+## Building Neural Networks
 
 ### Using nn.Module
 
@@ -217,7 +217,7 @@ dropout = nn.Dropout(0.5)
 
 ---
 
-## Training Models {#training}
+## Training Models
 
 ### Basic Training Loop
 
@@ -269,7 +269,7 @@ print(f'Accuracy: {100 * correct / total:.2f}%')
 
 ---
 
-## Data Loading {#data-loading}
+## Data Loading
 
 ### Custom Dataset
 
@@ -320,7 +320,7 @@ test_loader = DataLoader(test_dataset, batch_size=64, shuffle=False)
 
 ---
 
-## Transfer Learning {#transfer-learning}
+## Transfer Learning
 
 ### Using Pre-trained Models
 
@@ -358,7 +358,7 @@ optimizer = optim.Adam([
 
 ---
 
-## Custom Modules {#custom-modules}
+## Custom Modules
 
 ### Custom Layer
 
@@ -401,7 +401,7 @@ class ResidualBlock(nn.Module):
 
 ---
 
-## Distributed Training {#distributed}
+## Distributed Training
 
 ### DataParallel
 
@@ -428,7 +428,7 @@ model = DistributedDataParallel(model.cuda(), device_ids=[local_rank])
 
 ---
 
-## Model Deployment {#deployment}
+## Model Deployment
 
 ### Saving and Loading
 
@@ -467,7 +467,7 @@ output = loaded_model(example)
 
 ---
 
-## Practical Examples {#examples}
+## Practical Examples
 
 ### Example: Image Classification
 

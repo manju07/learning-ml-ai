@@ -1,23 +1,23 @@
 # Deep Python Learning: Advanced Concepts and Best Practices
 
 ## Table of Contents
-1. [Python Fundamentals Review](#fundamentals)
-2. [Advanced Data Structures](#data-structures)
-3. [Object-Oriented Programming](#oop)
-4. [Functional Programming](#functional)
-5. [Decorators and Metaclasses](#decorators)
-6. [Generators and Iterators](#generators)
+1. [Python Fundamentals Review](#python-fundamentals-review)
+2. [Advanced Data Structures](#advanced-data-structures)
+3. [Object-Oriented Programming](#object-oriented-programming)
+4. [Functional Programming](#functional-programming)
+5. [Decorators and Metaclasses](#decorators-and-metaclasses)
+6. [Generators and Iterators](#generators-and-iterators)
 7. [Context Managers](#context-managers)
-8. [Concurrency and Parallelism](#concurrency)
-9. [Memory Management](#memory)
-10. [Performance Optimization](#performance)
+8. [Concurrency and Parallelism](#concurrency-and-parallelism)
+9. [Memory Management](#memory-management)
+10. [Performance Optimization](#performance-optimization)
 11. [Design Patterns](#design-patterns)
-12. [Testing and Debugging](#testing)
+12. [Testing and Debugging](#testing-and-debugging)
 13. [Best Practices](#best-practices)
 
 ---
 
-## Python Fundamentals Review {#fundamentals}
+## Python Fundamentals Review
 
 ### Pythonic Code
 
@@ -86,7 +86,7 @@ func(1, 2, 3, 4, 5, x=10, y=20)
 
 ---
 
-## Advanced Data Structures {#data-structures}
+## Advanced Data Structures
 
 ### Collections Module
 
@@ -143,7 +143,7 @@ class LinkedList:
 
 ---
 
-## Object-Oriented Programming {#oop}
+## Object-Oriented Programming
 
 ### Advanced Classes
 
@@ -315,7 +315,7 @@ print(v3())   # Uses __call__
 
 ---
 
-## Functional Programming {#functional}
+## Functional Programming
 
 ### Higher-Order Functions
 
@@ -402,7 +402,7 @@ print(c1())  # 2
 
 ---
 
-## Decorators and Metaclasses {#decorators}
+## Decorators and Metaclasses
 
 ### Function Decorators
 
@@ -514,7 +514,7 @@ print(obj.get_class_name())  # "MyClass"
 
 ---
 
-## Generators and Iterators {#generators}
+## Generators and Iterators
 
 ### Generators
 
@@ -575,7 +575,7 @@ for num in CountDown(5):
 
 ---
 
-## Context Managers {#context-managers}
+## Context Managers
 
 ### Using Context Managers
 
@@ -627,7 +627,7 @@ with timer("Operation"):
 
 ---
 
-## Concurrency and Parallelism {#concurrency}
+## Concurrency and Parallelism
 
 ### Threading
 
@@ -712,7 +712,7 @@ results = asyncio.run(main())
 
 ---
 
-## Memory Management {#memory}
+## Memory Management
 
 ### Memory Profiling
 
@@ -752,7 +752,7 @@ gc.enable()
 
 ---
 
-## Performance Optimization {#performance}
+## Performance Optimization
 
 ### Profiling
 
@@ -816,7 +816,7 @@ result = fast_sum(arr)
 
 ---
 
-## Design Patterns {#design-patterns}
+## Design Patterns
 
 ### Singleton Pattern
 
@@ -871,7 +871,7 @@ class Subject:
 
 ---
 
-## Testing and Debugging {#testing}
+## Testing and Debugging
 
 ### Unit Testing
 
@@ -935,7 +935,7 @@ def buggy_function_v2(x, y):
 
 ---
 
-## Best Practices {#best-practices}
+## Best Practices
 
 ### Code Style
 

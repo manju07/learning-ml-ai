@@ -1,20 +1,20 @@
 # Time Series Forecasting: Complete Guide
 
 ## Table of Contents
-1. [Introduction to Time Series](#introduction)
-2. [Time Series Components](#components)
+1. [Introduction to Time Series](#introduction-to-time-series)
+2. [Time Series Components](#time-series-components)
 3. [Preprocessing](#preprocessing)
-4. [Traditional Methods](#traditional)
-5. [Machine Learning Methods](#ml-methods)
-6. [Deep Learning Methods](#deep-learning)
-7. [LSTM for Time Series](#lstm)
-8. [Transformer for Time Series](#transformer)
-9. [Evaluation Metrics](#metrics)
-10. [Practical Examples](#examples)
+4. [Traditional Methods](#traditional-methods)
+5. [Machine Learning Methods](#machine-learning-methods)
+6. [Deep Learning Methods](#deep-learning-methods)
+7. [LSTM for Time Series](#lstm-for-time-series)
+8. [Transformer for Time Series](#transformer-for-time-series)
+9. [Evaluation Metrics](#evaluation-metrics)
+10. [Practical Examples](#practical-examples)
 
 ---
 
-## Introduction to Time Series {#introduction}
+## Introduction to Time Series
 
 Time series forecasting involves predicting future values based on historical data points collected over time.
 
@@ -35,7 +35,7 @@ Time series forecasting involves predicting future values based on historical da
 
 ---
 
-## Time Series Components {#components}
+## Time Series Components
 
 ### Decomposition
 
@@ -62,7 +62,7 @@ plt.show()
 
 ---
 
-## Preprocessing {#preprocessing}
+## Preprocessing
 
 ### Stationarity
 
@@ -118,7 +118,7 @@ print(f"X shape: {X.shape}, y shape: {y.shape}")
 
 ---
 
-## Traditional Methods {#traditional}
+## Traditional Methods
 
 ### ARIMA
 
@@ -171,7 +171,7 @@ model.plot(forecast)
 
 ---
 
-## Machine Learning Methods {#ml-methods}
+## Machine Learning Methods
 
 ### Linear Regression
 
@@ -207,7 +207,7 @@ predictions = model.predict(X)
 
 ---
 
-## Deep Learning Methods {#deep-learning}
+## Deep Learning Methods
 
 ### Simple RNN
 
@@ -227,7 +227,7 @@ model.fit(X, y, epochs=50, validation_split=0.2)
 
 ---
 
-## LSTM for Time Series {#lstm}
+## LSTM for Time Series
 
 ### LSTM Model
 
@@ -292,7 +292,7 @@ model = keras.Sequential([
 
 ---
 
-## Transformer for Time Series {#transformer}
+## Transformer for Time Series
 
 ### Time Series Transformer
 
@@ -338,7 +338,7 @@ model.compile(optimizer='adam', loss='mse')
 
 ---
 
-## Evaluation Metrics {#metrics}
+## Evaluation Metrics
 
 ### Metrics
 
@@ -368,7 +368,7 @@ print(metrics)
 
 ---
 
-## Practical Examples {#examples}
+## Practical Examples
 
 ### Example: Stock Price Prediction
 

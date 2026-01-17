@@ -4,21 +4,21 @@
 1. [Introduction](#introduction)
 2. [Probability Fundamentals](#probability-fundamentals)
 3. [Random Variables](#random-variables)
-4. [Probability Distributions](#distributions)
-5. [Joint and Conditional Probability](#joint-conditional)
-6. [Bayes' Theorem](#bayes)
-7. [Expectation and Variance](#expectation-variance)
-8. [Covariance and Correlation](#covariance)
-9. [Central Limit Theorem](#clt)
+4. [Probability Distributions](#probability-distributions)
+5. [Joint and Conditional Probability](#joint-and-conditional-probability)
+6. [Bayes' Theorem](#bayes-theorem)
+7. [Expectation and Variance](#expectation-and-variance)
+8. [Covariance and Correlation](#covariance-and-correlation)
+9. [Central Limit Theorem](#central-limit-theorem)
 10. [Hypothesis Testing](#hypothesis-testing)
-11. [Maximum Likelihood Estimation](#mle)
+11. [Maximum Likelihood Estimation](#maximum-likelihood-estimation)
 12. [Bayesian Inference](#bayesian-inference)
-13. [Applications in ML/DL](#applications)
-14. [Practical Examples](#examples)
+13. [Applications in ML/DL](#applications-in-mldl)
+14. [Practical Examples](#practical-examples)
 
 ---
 
-## Introduction {#introduction}
+## Introduction
 
 Probability and statistics form the theoretical foundation for machine learning and deep learning. They provide:
 - **Uncertainty Quantification**: Understanding model confidence
@@ -36,7 +36,7 @@ Probability and statistics form the theoretical foundation for machine learning 
 
 ---
 
-## Probability Fundamentals {#probability-fundamentals}
+## Probability Fundamentals
 
 ### Sample Space and Events
 ```python
@@ -77,7 +77,7 @@ print(f"P(A ∪ B) = {probability_union(A, B)}")
 
 ---
 
-## Random Variables {#random-variables}
+## Random Variables
 
 ### Discrete Random Variables
 ```python
@@ -123,7 +123,7 @@ plt.show()
 
 ---
 
-## Probability Distributions {#distributions}
+## Probability Distributions
 
 ### Discrete Distributions
 
@@ -295,7 +295,7 @@ plt.show()
 
 ---
 
-## Joint and Conditional Probability {#joint-conditional}
+## Joint and Conditional Probability
 
 ### Joint Probability
 ```python
@@ -358,7 +358,7 @@ print(f"Independent: {is_independent}")
 
 ---
 
-## Bayes' Theorem {#bayes}
+## Bayes' Theorem
 
 ### Formula
 P(A|B) = P(B|A) * P(A) / P(B)
@@ -418,7 +418,7 @@ print(f"Posterior P(fair | 3 heads): {posterior_fair:.4f}")
 
 ---
 
-## Expectation and Variance {#expectation-variance}
+## Expectation and Variance
 
 ### Expectation (Mean)
 ```python
@@ -472,7 +472,7 @@ print(f"Std Dev = {std_dev:.4f}")
 
 ---
 
-## Covariance and Correlation {#covariance}
+## Covariance and Correlation
 
 ### Covariance
 ```python
@@ -526,7 +526,7 @@ plt.show()
 
 ---
 
-## Central Limit Theorem {#clt}
+## Central Limit Theorem
 
 The CLT states that the sum of independent random variables approaches a normal distribution.
 
@@ -559,7 +559,7 @@ plt.show()
 
 ---
 
-## Hypothesis Testing {#hypothesis-testing}
+## Hypothesis Testing
 
 ### T-Test
 ```python
@@ -600,7 +600,7 @@ print(f"Degrees of freedom: {dof}")
 
 ---
 
-## Maximum Likelihood Estimation {#mle}
+## Maximum Likelihood Estimation
 
 ### Concept
 Find parameters that maximize the likelihood of observing the data.
@@ -644,7 +644,7 @@ plt.show()
 
 ---
 
-## Bayesian Inference {#bayesian-inference}
+## Bayesian Inference
 
 ### Prior, Likelihood, Posterior
 ```python
@@ -690,7 +690,7 @@ print(f"MLE estimate: {n_heads / (n_heads + n_tails):.4f}")
 
 ---
 
-## Applications in ML/DL {#applications}
+## Applications in ML/DL
 
 ### 1. Loss Functions as Negative Log-Likelihood
 ```python
@@ -779,7 +779,7 @@ print(f"Significant: {result['significant']}")
 
 ---
 
-## Practical Examples {#examples}
+## Practical Examples
 
 ### Example 1: Naive Bayes Classifier
 ```python

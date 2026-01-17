@@ -2,18 +2,18 @@
 
 ## Table of Contents
 1. [Introduction](#introduction)
-2. [Information and Entropy](#entropy)
-3. [Joint and Conditional Entropy](#joint-conditional-entropy)
+2. [Information and Entropy](#information-and-entropy)
+3. [Joint and Conditional Entropy](#joint-and-conditional-entropy)
 4. [Mutual Information](#mutual-information)
-5. [Kullback-Leibler Divergence](#kl-divergence)
+5. [Kullback-Leibler Divergence](#kullback-leibler-divergence)
 6. [Cross-Entropy](#cross-entropy)
-7. [Maximum Entropy Principle](#max-entropy)
-8. [Applications in ML/DL](#applications)
-9. [Practical Examples](#examples)
+7. [Maximum Entropy Principle](#maximum-entropy-principle)
+8. [Applications in ML/DL](#applications-in-mldl)
+9. [Practical Examples](#practical-examples)
 
 ---
 
-## Introduction {#introduction}
+## Introduction
 
 Information theory provides a mathematical framework for quantifying information, uncertainty, and communication. It's fundamental to machine learning and deep learning, especially for:
 - **Loss Functions**: Cross-entropy loss for classification
@@ -30,7 +30,7 @@ Information theory provides a mathematical framework for quantifying information
 
 ---
 
-## Information and Entropy {#entropy}
+## Information and Entropy
 
 ### Information Content
 The information content of an event with probability p is:
@@ -127,7 +127,7 @@ print(f"Uniform achieves maximum: {np.isclose(entropy_uniform, max_entropy)}")
 
 ---
 
-## Joint and Conditional Entropy {#joint-conditional-entropy}
+## Joint and Conditional Entropy
 
 ### Joint Entropy
 H(X, Y) = -Σ Σ p(x, y) * log₂(p(x, y))
@@ -190,7 +190,7 @@ print(f"Match: {np.isclose(H_XY_chain, H_XY)}")
 
 ---
 
-## Mutual Information {#mutual-information}
+## Mutual Information
 
 ### Definition
 Mutual information measures the amount of information one variable contains about another:
@@ -265,7 +265,7 @@ print(f"I(X; Y) ≤ min(H(X), H(Y)): {I_XY <= min(H_X, H_Y)}")
 
 ---
 
-## Kullback-Leibler Divergence {#kl-divergence}
+## Kullback-Leibler Divergence
 
 ### Definition
 KL divergence measures how different one probability distribution is from another:
@@ -357,7 +357,7 @@ print(f"Total VAE loss: {total_loss:.4f}")
 
 ---
 
-## Cross-Entropy {#cross-entropy}
+## Cross-Entropy
 
 ### Definition
 Cross-entropy measures the average code length when using distribution Q to encode events from distribution P:
@@ -423,7 +423,7 @@ print(f"Lower loss = better prediction: {loss_good < loss_bad}")
 
 ---
 
-## Maximum Entropy Principle {#max-entropy}
+## Maximum Entropy Principle
 
 The maximum entropy principle states that, given constraints, the probability distribution with maximum entropy is the most unbiased.
 
@@ -487,7 +487,7 @@ print(f"Uniform entropy (no constraint): {entropy_uniform:.4f}")
 
 ---
 
-## Applications in ML/DL {#applications}
+## Applications in ML/DL
 
 ### 1. Feature Selection with Mutual Information
 ```python
@@ -579,7 +579,7 @@ print(f"Lower entropy = more confident: {ent_confident[0] < ent_uncertain[0]}")
 
 ---
 
-## Practical Examples {#examples}
+## Practical Examples
 
 ### Example 1: Information Gain for Decision Trees
 ```python

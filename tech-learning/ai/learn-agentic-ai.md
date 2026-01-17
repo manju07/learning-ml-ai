@@ -1,23 +1,23 @@
 # Agentic AI: Frameworks and Usage Guide
 
 ## Table of Contents
-1. [Introduction to Agentic AI](#introduction)
-2. [Agent Architecture](#architecture)
-3. [LangChain Framework](#langchain)
-4. [LlamaIndex Framework](#llamaindex)
-5. [AutoGPT and AgentGPT](#autogpt)
-6. [CrewAI Framework](#crewai)
+1. [Introduction to Agentic AI](#introduction-to-agentic-ai)
+2. [Agent Architecture](#agent-architecture)
+3. [LangChain Framework](#langchain-framework)
+4. [LlamaIndex Framework](#llamaindex-framework)
+5. [AutoGPT and AgentGPT](#autogpt-and-agentgpt)
+6. [CrewAI Framework](#crewai-framework)
 7. [Semantic Kernel](#semantic-kernel)
-8. [Building Custom Agents](#custom-agents)
+8. [Building Custom Agents](#building-custom-agents)
 9. [Tool Integration](#tool-integration)
-10. [Memory and State Management](#memory)
-11. [Multi-Agent Systems](#multi-agent)
-12. [Practical Examples](#examples)
+10. [Memory and State Management](#memory-and-state-management)
+11. [Multi-Agent Systems](#multi-agent-systems)
+12. [Practical Examples](#practical-examples)
 13. [Best Practices](#best-practices)
 
 ---
 
-## Introduction to Agentic AI {#introduction}
+## Introduction to Agentic AI
 
 Agentic AI refers to AI systems that can autonomously perform tasks by reasoning, planning, and using tools. Unlike traditional AI that responds to prompts, agentic AI can break down complex goals into steps and execute them.
 
@@ -50,7 +50,7 @@ Agentic AI refers to AI systems that can autonomously perform tasks by reasoning
 
 ---
 
-## Agent Architecture {#architecture}
+## Agent Architecture
 
 ### Core Components
 
@@ -104,7 +104,7 @@ def agent_loop(agent, goal, max_iterations=10):
 
 ---
 
-## LangChain Framework {#langchain}
+## LangChain Framework
 
 ### Installation
 
@@ -302,7 +302,7 @@ result = overall_chain.run("Artificial Intelligence")
 
 ---
 
-## LlamaIndex Framework {#llamaindex}
+## LlamaIndex Framework
 
 ### Installation
 
@@ -433,7 +433,7 @@ agent = ReActAgent.from_tools([db_tool, email_tool], llm=llm)
 
 ---
 
-## AutoGPT and AgentGPT {#autogpt}
+## AutoGPT and AgentGPT
 
 ### AutoGPT Concept
 
@@ -525,7 +525,7 @@ class AgentGPT:
 
 ---
 
-## CrewAI Framework {#crewai}
+## CrewAI Framework
 
 ### Installation
 
@@ -668,7 +668,7 @@ agent = Agent(
 
 ---
 
-## Semantic Kernel {#semantic-kernel}
+## Semantic Kernel
 
 ### Installation
 
@@ -728,7 +728,7 @@ result = await kernel.run_async(
 
 ---
 
-## Building Custom Agents {#custom-agts}
+## Building Custom Agents
 
 ### Simple Custom Agent
 
@@ -828,7 +828,7 @@ class PlanningAgent:
 
 ---
 
-## Tool Integration {#tool-integration}
+## Tool Integration
 
 ### Creating Custom Tools
 
@@ -943,7 +943,7 @@ results = db_tool.execute("SELECT * FROM users LIMIT 10")
 
 ---
 
-## Memory and State Management {#memory}
+## Memory and State Management
 
 ### Conversation Memory
 
@@ -1030,7 +1030,7 @@ preference = ltm.retrieve("user_preference")
 
 ---
 
-## Multi-Agent Systems {#multi-agent}
+## Multi-Agent Systems
 
 ### Agent Communication
 
@@ -1098,7 +1098,7 @@ class ManagerAgent:
 
 ---
 
-## Practical Examples {#examples}
+## Practical Examples
 
 ### Example 1: Research Agent
 
@@ -1221,7 +1221,7 @@ class CustomerServiceAgent:
 
 ---
 
-## Best Practices {#best-practices}
+## Best Practices
 
 ### 1. Error Handling
 

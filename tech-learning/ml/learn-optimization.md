@@ -3,18 +3,18 @@
 ## Table of Contents
 1. [Introduction](#introduction)
 2. [Convex Optimization](#convex-optimization)
-3. [Gradient-Based Methods](#gradient-methods)
-4. [Second-Order Methods](#second-order)
-5. [Stochastic Optimization](#stochastic)
-6. [Constrained Optimization](#constrained)
-7. [Non-Convex Optimization](#non-convex)
-8. [Hyperparameter Optimization](#hyperparameter)
-9. [Applications in ML/DL](#applications)
-10. [Practical Examples](#examples)
+3. [Gradient-Based Methods](#gradient-based-methods)
+4. [Second-Order Methods](#second-order-methods)
+5. [Stochastic Optimization](#stochastic-optimization)
+6. [Constrained Optimization](#constrained-optimization)
+7. [Non-Convex Optimization](#non-convex-optimization)
+8. [Hyperparameter Optimization](#hyperparameter-optimization)
+9. [Applications in ML/DL](#applications-in-mldl)
+10. [Practical Examples](#practical-examples)
 
 ---
 
-## Introduction {#introduction}
+## Introduction
 
 Optimization is at the heart of machine learning and deep learning. Most ML problems reduce to finding parameters that minimize a loss function.
 
@@ -34,7 +34,7 @@ subject to: g_i(θ) ≤ 0, i = 1, ..., m
 
 ---
 
-## Convex Optimization {#convex-optimization}
+## Convex Optimization
 
 ### Convex Functions
 A function f is convex if:
@@ -102,7 +102,7 @@ plt.show()
 
 ---
 
-## Gradient-Based Methods {#gradient-methods}
+## Gradient-Based Methods
 
 ### Gradient Descent
 ```python
@@ -345,7 +345,7 @@ plt.show()
 
 ---
 
-## Second-Order Methods {#second-order}
+## Second-Order Methods
 
 ### Newton's Method
 ```python
@@ -409,7 +409,7 @@ print(f"Converged: {result.success}")
 
 ---
 
-## Stochastic Optimization {#stochastic}
+## Stochastic Optimization
 
 ### Stochastic Gradient Descent (SGD)
 ```python
@@ -492,7 +492,7 @@ for r in results:
 
 ---
 
-## Constrained Optimization {#constrained}
+## Constrained Optimization
 
 ### Lagrange Multipliers
 ```python
@@ -553,7 +553,7 @@ print(f"Constraint satisfied: ||x|| = {np.linalg.norm(x_opt):.4f} ≤ 1")
 
 ---
 
-## Non-Convex Optimization {#non-convex}
+## Non-Convex Optimization
 
 ### Local Minima Problem
 ```python
@@ -636,7 +636,7 @@ plt.show()
 
 ---
 
-## Hyperparameter Optimization {#hyperparameter}
+## Hyperparameter Optimization
 
 ### Grid Search
 ```python
@@ -709,7 +709,7 @@ print(f"Best score: {-result.fun:.4f}")
 
 ---
 
-## Applications in ML/DL {#applications}
+## Applications in ML/DL
 
 ### 1. Training Neural Networks
 ```python
@@ -740,7 +740,7 @@ lasso = Lasso(alpha=1.0)   # L1 regularization
 
 ---
 
-## Practical Examples {#examples}
+## Practical Examples
 
 ### Example 1: Logistic Regression from Scratch
 ```python

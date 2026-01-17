@@ -1,24 +1,24 @@
 # TensorFlow: Complete Guide with Examples
 
 ## Table of Contents
-1. [Introduction to TensorFlow](#introduction)
-2. [TensorFlow Fundamentals](#fundamentals)
-3. [Tensors and Operations](#tensors-operations)
+1. [Introduction to TensorFlow](#introduction-to-tensorflow)
+2. [TensorFlow Fundamentals](#tensorflow-fundamentals)
+3. [Tensors and Operations](#tensors-and-operations)
 4. [Building Models](#building-models)
-5. [Training and Evaluation](#training-evaluation)
-6. [Data Loading and Preprocessing](#data-loading)
-7. [Custom Layers and Models](#custom-components)
-8. [Callbacks and Monitoring](#callbacks-monitoring)
+5. [Training and Evaluation](#training-and-evaluation)
+6. [Data Loading and Preprocessing](#data-loading-and-preprocessing)
+7. [Custom Layers and Models](#custom-layers-and-models)
+8. [Callbacks and Monitoring](#callbacks-and-monitoring)
 9. [Distributed Training](#distributed-training)
-10. [TensorBoard Visualization](#tensorboard)
-11. [Model Saving and Loading](#model-saving)
+10. [TensorBoard Visualization](#tensorboard-visualization)
+11. [Model Saving and Loading](#model-saving-and-loading)
 12. [TensorFlow Serving](#tensorflow-serving)
 13. [Advanced Topics](#advanced-topics)
-14. [Practical Examples](#examples)
+14. [Practical Examples](#practical-examples)
 
 ---
 
-## Introduction to TensorFlow {#introduction}
+## Introduction to TensorFlow
 
 TensorFlow is an open-source machine learning framework developed by Google. It provides a comprehensive ecosystem for building and deploying ML models.
 
@@ -54,7 +54,7 @@ python -c "import tensorflow as tf; print(tf.__version__)"
 
 ---
 
-## TensorFlow Fundamentals {#fundamentals}
+## TensorFlow Fundamentals
 
 ### Basic Concepts
 
@@ -98,7 +98,7 @@ print(result.numpy())
 
 ---
 
-## Tensors and Operations {#tensors-operations}
+## Tensors and Operations
 
 ### Creating Tensors
 
@@ -193,7 +193,7 @@ print(f"Broadcasting result:\n{result.numpy()}")
 
 ---
 
-## Building Models {#building-models}
+## Building Models
 
 ### Sequential API
 
@@ -287,7 +287,7 @@ reshape = layers.Reshape((28, 28))
 
 ---
 
-## Training and Evaluation {#training-evaluation}
+## Training and Evaluation
 
 ### Compiling Models
 
@@ -414,7 +414,7 @@ for epoch in range(epochs):
 
 ---
 
-## Data Loading and Preprocessing {#data-loading}
+## Data Loading and Preprocessing
 
 ### Loading Built-in Datasets
 
@@ -523,7 +523,7 @@ embedding_layer = layers.Embedding(
 
 ---
 
-## Custom Layers and Models {#custom-components}
+## Custom Layers and Models
 
 ### Custom Layer
 
@@ -676,7 +676,7 @@ model.compile(
 
 ---
 
-## Callbacks and Monitoring {#callbacks-monitoring}
+## Callbacks and Monitoring
 
 ### Built-in Callbacks
 
@@ -752,7 +752,7 @@ model.fit(x_train, y_train, epochs=10, callbacks=[CustomCallback()])
 
 ---
 
-## Distributed Training {#distributed-training}
+## Distributed Training
 
 ### Multi-GPU Training
 
@@ -798,7 +798,7 @@ model.fit(x_train, y_train, epochs=10, batch_size=128)
 
 ---
 
-## TensorBoard Visualization {#tensorboard}
+## TensorBoard Visualization
 
 ### Basic Usage
 
@@ -843,7 +843,7 @@ class CustomTensorBoard(keras.callbacks.TensorBoard):
 
 ---
 
-## Model Saving and Loading {#model-saving}
+## Model Saving and Loading
 
 ### Save Entire Model
 
@@ -915,7 +915,7 @@ model.load_weights('training/cp-0010.ckpt')
 
 ---
 
-## TensorFlow Serving {#tensorflow-serving}
+## TensorFlow Serving
 
 ### Save Model for Serving
 
@@ -963,7 +963,7 @@ print(predictions)
 
 ---
 
-## Advanced Topics {#advanced-topics}
+## Advanced Topics
 
 ### Mixed Precision Training
 
@@ -1041,7 +1041,7 @@ model_for_pruning.fit(x_train, y_train, epochs=10)
 
 ---
 
-## Practical Examples {#examples}
+## Practical Examples
 
 ### Example 1: Complete Training Pipeline
 

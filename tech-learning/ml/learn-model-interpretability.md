@@ -1,21 +1,21 @@
 # Model Interpretability: Complete Guide
 
 ## Table of Contents
-1. [Introduction to Interpretability](#introduction)
+1. [Introduction to Interpretability](#introduction-to-interpretability)
 2. [Feature Importance](#feature-importance)
-3. [SHAP Values](#shap)
+3. [SHAP Values](#shap-values)
 4. [LIME](#lime)
-5. [Partial Dependence Plots](#pdp)
-6. [Permutation Importance](#permutation)
-7. [Attention Visualization](#attention)
-8. [Model-Agnostic Methods](#model-agnostic)
-9. [Interpretability for Deep Learning](#deep-learning)
-10. [Practical Examples](#examples)
+5. [Partial Dependence Plots](#partial-dependence-plots)
+6. [Permutation Importance](#permutation-importance)
+7. [Attention Visualization](#attention-visualization)
+8. [Model-Agnostic Methods](#model-agnostic-methods)
+9. [Interpretability for Deep Learning](#interpretability-for-deep-learning)
+10. [Practical Examples](#practical-examples)
 11. [Best Practices](#best-practices)
 
 ---
 
-## Introduction to Interpretability {#introduction}
+## Introduction to Interpretability
 
 Model interpretability helps understand how models make predictions, which is crucial for:
 - **Trust**: Building trust in AI systems
@@ -33,7 +33,7 @@ Model interpretability helps understand how models make predictions, which is cr
 
 ---
 
-## Feature Importance {#feature-importance}
+## Feature Importance
 
 ### Tree-based Feature Importance
 
@@ -89,7 +89,7 @@ print(perm_df)
 
 ---
 
-## SHAP Values {#shap}
+## SHAP Values
 
 ### Installation
 
@@ -170,7 +170,7 @@ shap.plots.text(shap_values)
 
 ---
 
-## LIME {#lime}
+## LIME
 
 ### Installation
 
@@ -259,7 +259,7 @@ plt.show()
 
 ---
 
-## Partial Dependence Plots {#pdp}
+## Partial Dependence Plots
 
 ### Basic PDP
 
@@ -295,7 +295,7 @@ plt.show()
 
 ---
 
-## Permutation Importance {#permutation}
+## Permutation Importance
 
 ### ELI5 Permutation Importance
 
@@ -313,7 +313,7 @@ eli5.show_prediction(model, X_test.iloc[0], feature_names=feature_names)
 
 ---
 
-## Attention Visualization {#attention}
+## Attention Visualization
 
 ### Transformer Attention
 
@@ -350,7 +350,7 @@ plot_attention(attentions[0][0, 0].detach().numpy(), tokenizer.convert_ids_to_to
 
 ---
 
-## Model-Agnostic Methods {#model-agnostic}
+## Model-Agnostic Methods
 
 ### Surrogate Models
 
@@ -386,7 +386,7 @@ plt.show()
 
 ---
 
-## Interpretability for Deep Learning {#deep-learning}
+## Interpretability for Deep Learning
 
 ### Integrated Gradients
 
@@ -467,7 +467,7 @@ plt.show()
 
 ---
 
-## Practical Examples {#examples}
+## Practical Examples
 
 ### Example 1: Complete Interpretability Pipeline
 
@@ -553,7 +553,7 @@ explain_prediction(model, X_test.iloc[0].values, feature_names)
 
 ---
 
-## Best Practices {#best-practices}
+## Best Practices
 
 1. **Use Multiple Methods**: Combine different interpretability techniques
 2. **Understand Limitations**: Each method has assumptions

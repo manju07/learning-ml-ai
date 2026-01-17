@@ -6,16 +6,16 @@
 3. [Matrices](#matrices)
 4. [Matrix Operations](#matrix-operations)
 5. [Linear Transformations](#linear-transformations)
-6. [Eigenvalues and Eigenvectors](#eigenvalues)
-7. [Matrix Decompositions](#decompositions)
-8. [Vector Spaces and Subspaces](#vector-spaces)
-9. [Norms and Distances](#norms)
-10. [Applications in ML/DL](#applications)
-11. [Practical Examples](#examples)
+6. [Eigenvalues and Eigenvectors](#eigenvalues-and-eigenvectors)
+7. [Matrix Decompositions](#matrix-decompositions)
+8. [Vector Spaces and Subspaces](#vector-spaces-and-subspaces)
+9. [Norms and Distances](#norms-and-distances)
+10. [Applications in ML/DL](#applications-in-mldl)
+11. [Practical Examples](#practical-examples)
 
 ---
 
-## Introduction {#introduction}
+## Introduction
 
 Linear algebra is the mathematical foundation of machine learning and deep learning. It provides the language and tools to understand how data is represented, transformed, and processed in ML algorithms.
 
@@ -35,7 +35,7 @@ Linear algebra is the mathematical foundation of machine learning and deep learn
 
 ---
 
-## Vectors {#vectors}
+## Vectors
 
 ### Definition
 A vector is an ordered collection of numbers (scalars) arranged in a row or column.
@@ -142,7 +142,7 @@ print(f"Norm of unit vector: {np.linalg.norm(unit_vector)}")  # 1.0
 
 ---
 
-## Matrices {#matrices}
+## Matrices
 
 ### Definition
 A matrix is a rectangular array of numbers arranged in rows and columns.
@@ -200,7 +200,7 @@ print(f"Is orthogonal: {np.allclose(Q @ Q.T, np.eye(2))}")
 
 ---
 
-## Matrix Operations {#matrix-operations}
+## Matrix Operations
 
 ### Matrix Addition and Subtraction
 ```python
@@ -313,7 +313,7 @@ print(f"tr(A) = {trace}")  # 1 + 4 = 5
 
 ---
 
-## Linear Transformations {#linear-transformations}
+## Linear Transformations
 
 ### Definition
 A linear transformation T satisfies:
@@ -371,7 +371,7 @@ print(f"Sheared: {v_sheared}")  # [2, 1]
 
 ---
 
-## Eigenvalues and Eigenvectors {#eigenvalues}
+## Eigenvalues and Eigenvectors
 
 ### Definition
 For a matrix A, if Av = λv for some scalar λ and vector v ≠ 0, then:
@@ -411,7 +411,7 @@ for i, (eigenval, eigenvec) in enumerate(zip(eigenvalues, eigenvectors.T)):
 
 ---
 
-## Matrix Decompositions {#decompositions}
+## Matrix Decompositions
 
 ### Eigenvalue Decomposition
 ```python
@@ -537,7 +537,7 @@ print(f"Match: {np.allclose(A, A_reconstructed)}")
 
 ---
 
-## Vector Spaces and Subspaces {#vector-spaces}
+## Vector Spaces and Subspaces
 
 ### Vector Space
 A set V with operations + and · satisfying:
@@ -595,7 +595,7 @@ print(f"Dimension: {rank}")
 
 ---
 
-## Norms and Distances {#norms}
+## Norms and Distances
 
 ### Matrix Norms
 
@@ -650,7 +650,7 @@ print(f"Cosine distance: {cosine_dist}")
 
 ---
 
-## Applications in ML/DL {#applications}
+## Applications in ML/DL
 
 ### 1. Data Representation
 ```python
@@ -754,7 +754,7 @@ print(f"Attention output shape: {attention_output.shape}")
 
 ---
 
-## Practical Examples {#examples}
+## Practical Examples
 
 ### Example 1: Image Compression with SVD
 ```python
