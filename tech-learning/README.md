@@ -230,9 +230,55 @@ Complete Self-Supervised Learning guide:
 - Self-supervised NLP (BERT MLM)
 - Linear probing and fine-tuning
 
+### 22. [Neural Architecture Search Guide](./ml/learn-neural-architecture-search.md)
+Complete Neural Architecture Search guide:
+- Search space design (cell-based, macro)
+- DARTS (differentiable architecture search)
+- ENAS and weight sharing
+- EfficientNet compound scaling
+- NAS for Transformers
+- Practical examples with Optuna, AutoKeras
+
+### 23. [Anomaly Detection Guide](./ml/learn-anomaly-detection.md)
+Complete Anomaly Detection guide:
+- Statistical methods (Z-score, Mahalanobis)
+- Isolation Forest, One-Class SVM
+- Autoencoder-based methods
+- Deep SVDD, GAN-based
+- Time series anomaly detection
+- Evaluation and best practices
+
+### 24. [Continual Learning Guide](./ml/learn-continual-learning.md)
+Complete Continual Learning guide:
+- Catastrophic forgetting
+- Elastic Weight Consolidation (EWC)
+- Replay-based methods
+- Architectural methods (Progressive NN, PackNet)
+- Task-incremental vs class-incremental
+- Avalanche library examples
+
+### 25. [State Space Models & Mamba Guide](./ml/learn-state-space-models.md)
+Complete State Space Models guide:
+- SSM fundamentals and discretization
+- S4 (Structured State Spaces) and HiPPO
+- Mamba: selective state spaces, hardware-aware scan
+- Mamba vs Transformers (O(N) vs O(N²))
+- Mamba-2 and hybrid models (Jamba)
+- Mixture of Experts (MoE, Mixtral, DeepSeek)
+- Practical examples
+
+### 26. [Synthetic Data & Data-Centric AI Guide](./ml/learn-synthetic-data-datacentric.md)
+Complete Synthetic Data and Data-Centric AI guide:
+- CTGAN and tabular synthetic data
+- LLM-generated training data (Self-Instruct)
+- Image augmentation (Mixup, CutMix, diffusion)
+- Data quality and label noise (cleanlab)
+- Active learning strategies
+- Programmatic labeling (Snorkel)
+
 ### 🧠 Artificial Intelligence
 
-### 22. [Agentic AI Guide](./ai/learn-agentic-ai.md)
+### 27. [Agentic AI Guide](./ai/learn-agentic-ai.md)
 Complete Agentic AI frameworks and usage guide:
 - Introduction to Agentic AI and autonomous agents
 - Agent architecture and core components
@@ -248,13 +294,13 @@ Complete Agentic AI frameworks and usage guide:
 - Practical examples (Research, Code generation, Data analysis)
 - Best practices (Error handling, Security, Monitoring)
 
-### 23. [Generative AI Guide](./ai/learn-generative-ai.md)
+### 28. [Generative AI Guide](./ai/learn-generative-ai.md)
 Complete Generative AI guide:
 - GANs, VAEs, Diffusion Models
 - Image and text generation
 - Advanced generative techniques
 
-### 24. [LLMs and RAG Guide](./ai/learn-llms-rag.md)
+### 29. [LLMs and RAG Guide](./ai/learn-llms-rag.md)
 Complete Large Language Models and RAG guide:
 - LLM architectures and training
 - Retrieval-Augmented Generation
@@ -262,7 +308,7 @@ Complete Large Language Models and RAG guide:
 
 ### 📐 Mathematics Foundations
 
-### 25. [LLM Training & Alignment Guide](./ai/learn-llm-training-alignment.md)
+### 30. [LLM Training & Alignment Guide](./ai/learn-llm-training-alignment.md)
 Complete LLM Training & Alignment guide:
 - Pretraining, SFT, instruction tuning
 - RLHF (reward model, PPO)
@@ -270,7 +316,7 @@ Complete LLM Training & Alignment guide:
 - Constitutional AI
 - LoRA, QLoRA
 
-### 26. [Vector Databases & Retrieval Guide](./ai/learn-vector-databases-retrieval.md)
+### 31. [Vector Databases & Retrieval Guide](./ai/learn-vector-databases-retrieval.md)
 Complete Vector Databases & Dense Retrieval guide:
 - Embeddings and similarity metrics
 - ANN algorithms (HNSW, IVF, FAISS)
@@ -278,7 +324,7 @@ Complete Vector Databases & Dense Retrieval guide:
 - Hybrid search, reranking
 - Advanced RAG patterns
 
-### 27. [Agentic Reasoning Guide](./ai/learn-agentic-reasoning.md)
+### 32. [Agentic Reasoning Guide](./ai/learn-agentic-reasoning.md)
 Complete Agentic Reasoning guide:
 - Chain-of-Thought (CoT)
 - ReAct: Reasoning + Acting
@@ -286,7 +332,90 @@ Complete Agentic Reasoning guide:
 - Reflexion, Plan-and-Execute
 - Agent evaluation
 
-### 28. [Multimodal AI Guide](./ai/learn-multimodal-ai.md)
+### 33. [Advanced Reinforcement Learning Guide](./ai/learn-advanced-reinforcement-learning.md)
+Complete Advanced RL guide:
+- Soft Actor-Critic (SAC)
+- Twin Delayed DDPG (TD3)
+- Model-based RL, Offline RL
+- MuZero and learned world models
+- Intrinsic motivation (RND)
+- Multi-agent RL
+
+### 34. [AI Automation Guide](./ai/learn-ai-automation.md)
+Complete AI-Powered Automation guide:
+- Intelligent Document Processing (IDP)
+- AI workflow automation (n8n, LangChain)
+- RPA with AI, AI for test automation
+- Email/communication automation
+- Process mining with AI
+- Automation with LLM agents
+- Practical pipelines and best practices
+
+### 35. [AI for Code Guide](./ai/learn-ai-for-code.md)
+Complete AI for Code guide:
+- Code generation and prompting
+- Code understanding, embeddings (CodeBERT)
+- AI pair programming, Copilot-style completion
+- Code review, refactoring, documentation
+- SWE-bench and code agents
+- Self-correction, tool use
+
+### 36. [AI Observability & LLM Ops Guide](./ai/learn-ai-observability-llmops.md)
+Complete LLM Operations guide:
+- Logging, tracing (OpenTelemetry)
+- LLM metrics (latency, cost, tokens)
+- Evaluation and benchmarks (MMLU, HumanEval)
+- Guardrails and safety (PII, jailbreak)
+- Cost and latency optimization
+- Drift and quality monitoring
+- A/B testing prompts
+
+### 37. [Speech & Voice AI Guide](./ai/learn-speech-voice-ai.md)
+Complete Speech & Voice AI guide:
+- Automatic Speech Recognition (Whisper)
+- Text-to-Speech (OpenAI TTS, ElevenLabs)
+- Speaker diarization
+- Voice cloning and custom voices
+- Voice assistants and conversational AI
+- Speech emotion recognition
+- Practical pipelines
+
+### 38. [AI Safety & Red Teaming Guide](./ai/learn-ai-safety-red-teaming.md)
+Complete AI Safety guide:
+- Taxonomy of AI risks (content, operational, systemic)
+- Red teaming LLMs (automated + manual)
+- Jailbreaking and prompt injection defenses
+- Bias detection and fairness metrics
+- Hallucination detection and mitigation
+- Responsible AI (EU AI Act, model cards, audits)
+- Safety evaluation benchmarks
+
+### 39. [OpenAI Agents SDK Guide](./ai/learn-openai-agents-sdk.md)
+Complete OpenAI Agents SDK guide:
+- Core primitives (Agent, Tools, Handoffs, Guardrails, Tracing)
+- Function tools with auto schema generation
+- Agents as tools and handoff patterns
+- Input/output/tool guardrails with tripwires
+- Runner (sync, async, streaming)
+- Context and dependency injection
+- Structured outputs with Pydantic
+- Built-in tracing and observability
+- Multi-agent patterns (handoffs vs manager)
+- MCP integration
+- Production best practices
+
+### 40. [LangGraph & Agent Orchestration Guide](./ai/learn-langgraph-agent-orchestration.md)
+Complete Agent Orchestration guide:
+- LangGraph fundamentals (state, nodes, edges)
+- Conditional routing and cycles
+- Human-in-the-loop (checkpoints, approval gates)
+- Multi-agent orchestration (supervisor pattern)
+- Tool calling and function calling
+- Structured outputs (Pydantic, JSON mode)
+- Model Context Protocol (MCP)
+- Practical examples
+
+### 41. [Multimodal AI Guide](./ai/learn-multimodal-ai.md)
 Complete Multimodal AI guide:
 - CLIP contrastive learning
 - Vision-Language models (LLaVA, BLIP-2)
@@ -296,7 +425,7 @@ Complete Multimodal AI guide:
 
 ### 📐 Mathematics Foundations
 
-### 29. [Linear Algebra Guide](./ml/learn-linear-algebra.md)
+### 42. [Linear Algebra Guide](./ml/learn-linear-algebra.md)
 Essential linear algebra for ML/DL:
 - Vectors and matrices fundamentals
 - Matrix operations (multiplication, transpose, inverse)
@@ -307,7 +436,7 @@ Essential linear algebra for ML/DL:
 - Norms and distances
 - Applications in ML/DL (PCA, neural networks, attention)
 
-### 30. [Calculus Guide](./ml/learn-calculus.md)
+### 43. [Calculus Guide](./ml/learn-calculus.md)
 Calculus fundamentals for ML/DL:
 - Functions, limits, and continuity
 - Derivatives and differentiation rules
@@ -318,7 +447,7 @@ Calculus fundamentals for ML/DL:
 - Constrained optimization (Lagrange multipliers)
 - Applications in ML/DL (loss functions, training)
 
-### 31. [Probability & Statistics Guide](./ml/learn-probability-statistics.md)
+### 44. [Probability & Statistics Guide](./ml/learn-probability-statistics.md)
 Probability and statistics for ML/DL:
 - Probability fundamentals and random variables
 - Probability distributions (Normal, Binomial, Poisson)
@@ -330,7 +459,7 @@ Probability and statistics for ML/DL:
 - Maximum Likelihood Estimation (MLE)
 - Applications in ML/DL (loss functions, regularization, uncertainty)
 
-### 32. [Optimization Guide](./ml/learn-optimization.md)
+### 45. [Optimization Guide](./ml/learn-optimization.md)
 Optimization methods for ML/DL:
 - Convex optimization fundamentals
 - Gradient-based methods (GD, Momentum, NAG)
@@ -341,7 +470,7 @@ Optimization methods for ML/DL:
 - Non-convex optimization (simulated annealing)
 - Hyperparameter optimization (grid search, random search, Bayesian)
 
-### 33. [Information Theory Guide](./ml/learn-information-theory.md)
+### 46. [Information Theory Guide](./ml/learn-information-theory.md)
 Information theory for ML/DL:
 - Information content and Shannon entropy
 - Joint and conditional entropy
@@ -353,7 +482,7 @@ Information theory for ML/DL:
 
 ### 🔌 API & Backend
 
-### 34. [REST APIs Guide](./learn-rest-apis.md)
+### 47. [REST APIs Guide](./learn-rest-apis.md)
 Complete REST API design guide:
 - REST principles and HTTP fundamentals
 - Resource naming and URI design
@@ -362,7 +491,7 @@ Complete REST API design guide:
 - Practical examples with FastAPI and Flask
 - REST vs GraphQL comparison
 
-### 35. [GraphQL Guide](./learn-graphql.md)
+### 48. [GraphQL Guide](./learn-graphql.md)
 Complete GraphQL guide:
 - Queries, mutations, subscriptions
 - Schema design and type system
@@ -446,6 +575,10 @@ python examples/05_text_classification_lstm.py
 19. Explore [Model Compression](./ml/learn-model-compression.md) for deployment
 20. Study [Self-Supervised Learning](./ml/learn-self-supervised-learning.md) for pretraining
 21. Deep-dive [LLM Training & Alignment](./ai/learn-llm-training-alignment.md), [Vector DBs & Retrieval](./ai/learn-vector-databases-retrieval.md), [Agentic Reasoning](./ai/learn-agentic-reasoning.md)
+22. Explore [Advanced RL](./ai/learn-advanced-reinforcement-learning.md), [Neural Architecture Search](./ml/learn-neural-architecture-search.md), [Anomaly Detection](./ml/learn-anomaly-detection.md), [Continual Learning](./ml/learn-continual-learning.md)
+23. Build [AI Automation](./ai/learn-ai-automation.md) pipelines, master [AI for Code](./ai/learn-ai-for-code.md) and [LLM Ops](./ai/learn-ai-observability-llmops.md), explore [Speech & Voice AI](./ai/learn-speech-voice-ai.md)
+24. Study [State Space Models & Mamba](./ml/learn-state-space-models.md) as Transformer alternative, practice [Data-Centric AI](./ml/learn-synthetic-data-datacentric.md)
+25. Master [LangGraph](./ai/learn-langgraph-agent-orchestration.md) for agent orchestration, study [AI Safety](./ai/learn-ai-safety-red-teaming.md) for responsible deployment
 
 ## 🎯 Key Concepts Covered
 
