@@ -177,9 +177,62 @@ Complete Model Interpretability guide:
 - Feature importance
 - Model explainability
 
+### 16. [Graph Neural Networks Guide](./ml/learn-graph-neural-networks.md)
+Complete Graph Neural Networks guide:
+- Graph fundamentals and representation
+- Message passing paradigm
+- GCN, GAT, GraphSAGE architectures
+- Heterogeneous and temporal graphs
+- Link prediction and node classification
+- Practical examples with PyTorch Geometric
+- Over-smoothing and expressiveness
+
+### 17. [Federated Learning Guide](./ml/learn-federated-learning.md)
+Complete Federated Learning guide:
+- Federated Averaging (FedAvg)
+- Privacy: Differential Privacy, Secure Aggregation
+- Handling non-IID data (FedProx, FedBN)
+- Communication efficiency
+- Frameworks: Flower, TensorFlow Federated
+- Practical examples
+
+### 18. [Causal Inference Guide](./ml/learn-causal-inference.md)
+Complete Causal Inference for ML guide:
+- Correlation vs causation, confounding
+- Potential outcomes framework, ATE, CATE
+- Randomized experiments (A/B testing)
+- Observational methods: IPW, doubly robust
+- Meta-learners (T-learner, S-learner)
+- Uplift modeling
+- DoWhy, EconML
+
+### 19. [Vision Transformers Guide](./ml/learn-vision-transformers.md)
+Complete Vision Transformers (ViT) guide:
+- Patch embedding and positional encoding
+- ViT architecture, DeiT, MAE
+- Fine-tuning and linear probing
+- DETR for detection
+- Practical examples with transformers
+
+### 20. [Model Compression Guide](./ml/learn-model-compression.md)
+Complete Model Compression guide:
+- Quantization (PTQ, QAT, GPTQ, QLoRA)
+- Pruning (unstructured, structured)
+- Knowledge distillation
+- Low-rank factorization
+- Practical examples for deployment
+
+### 21. [Self-Supervised Learning Guide](./ml/learn-self-supervised-learning.md)
+Complete Self-Supervised Learning guide:
+- Contrastive learning (SimCLR, MoCo, InfoNCE)
+- BYOL, DINO
+- Masked Autoencoders (MAE)
+- Self-supervised NLP (BERT MLM)
+- Linear probing and fine-tuning
+
 ### 🧠 Artificial Intelligence
 
-### 16. [Agentic AI Guide](./ai/learn-agentic-ai.md)
+### 22. [Agentic AI Guide](./ai/learn-agentic-ai.md)
 Complete Agentic AI frameworks and usage guide:
 - Introduction to Agentic AI and autonomous agents
 - Agent architecture and core components
@@ -195,13 +248,13 @@ Complete Agentic AI frameworks and usage guide:
 - Practical examples (Research, Code generation, Data analysis)
 - Best practices (Error handling, Security, Monitoring)
 
-### 17. [Generative AI Guide](./ai/learn-generative-ai.md)
+### 23. [Generative AI Guide](./ai/learn-generative-ai.md)
 Complete Generative AI guide:
 - GANs, VAEs, Diffusion Models
 - Image and text generation
 - Advanced generative techniques
 
-### 18. [LLMs and RAG Guide](./ai/learn-llms-rag.md)
+### 24. [LLMs and RAG Guide](./ai/learn-llms-rag.md)
 Complete Large Language Models and RAG guide:
 - LLM architectures and training
 - Retrieval-Augmented Generation
@@ -209,7 +262,41 @@ Complete Large Language Models and RAG guide:
 
 ### 📐 Mathematics Foundations
 
-### 19. [Linear Algebra Guide](./ml/learn-linear-algebra.md)
+### 25. [LLM Training & Alignment Guide](./ai/learn-llm-training-alignment.md)
+Complete LLM Training & Alignment guide:
+- Pretraining, SFT, instruction tuning
+- RLHF (reward model, PPO)
+- Direct Preference Optimization (DPO)
+- Constitutional AI
+- LoRA, QLoRA
+
+### 26. [Vector Databases & Retrieval Guide](./ai/learn-vector-databases-retrieval.md)
+Complete Vector Databases & Dense Retrieval guide:
+- Embeddings and similarity metrics
+- ANN algorithms (HNSW, IVF, FAISS)
+- Vector DBs (Chroma, Pinecone, Qdrant)
+- Hybrid search, reranking
+- Advanced RAG patterns
+
+### 27. [Agentic Reasoning Guide](./ai/learn-agentic-reasoning.md)
+Complete Agentic Reasoning guide:
+- Chain-of-Thought (CoT)
+- ReAct: Reasoning + Acting
+- Tree-of-Thought (ToT), Graph of Thoughts (GoT)
+- Reflexion, Plan-and-Execute
+- Agent evaluation
+
+### 28. [Multimodal AI Guide](./ai/learn-multimodal-ai.md)
+Complete Multimodal AI guide:
+- CLIP contrastive learning
+- Vision-Language models (LLaVA, BLIP-2)
+- Image-text retrieval and generation
+- Embedding alignment
+- Practical examples with Hugging Face
+
+### 📐 Mathematics Foundations
+
+### 29. [Linear Algebra Guide](./ml/learn-linear-algebra.md)
 Essential linear algebra for ML/DL:
 - Vectors and matrices fundamentals
 - Matrix operations (multiplication, transpose, inverse)
@@ -220,7 +307,7 @@ Essential linear algebra for ML/DL:
 - Norms and distances
 - Applications in ML/DL (PCA, neural networks, attention)
 
-### 20. [Calculus Guide](./ml/learn-calculus.md)
+### 30. [Calculus Guide](./ml/learn-calculus.md)
 Calculus fundamentals for ML/DL:
 - Functions, limits, and continuity
 - Derivatives and differentiation rules
@@ -231,7 +318,7 @@ Calculus fundamentals for ML/DL:
 - Constrained optimization (Lagrange multipliers)
 - Applications in ML/DL (loss functions, training)
 
-### 21. [Probability & Statistics Guide](./ml/learn-probability-statistics.md)
+### 31. [Probability & Statistics Guide](./ml/learn-probability-statistics.md)
 Probability and statistics for ML/DL:
 - Probability fundamentals and random variables
 - Probability distributions (Normal, Binomial, Poisson)
@@ -243,7 +330,7 @@ Probability and statistics for ML/DL:
 - Maximum Likelihood Estimation (MLE)
 - Applications in ML/DL (loss functions, regularization, uncertainty)
 
-### 22. [Optimization Guide](./ml/learn-optimization.md)
+### 32. [Optimization Guide](./ml/learn-optimization.md)
 Optimization methods for ML/DL:
 - Convex optimization fundamentals
 - Gradient-based methods (GD, Momentum, NAG)
@@ -254,7 +341,7 @@ Optimization methods for ML/DL:
 - Non-convex optimization (simulated annealing)
 - Hyperparameter optimization (grid search, random search, Bayesian)
 
-### 23. [Information Theory Guide](./ml/learn-information-theory.md)
+### 33. [Information Theory Guide](./ml/learn-information-theory.md)
 Information theory for ML/DL:
 - Information content and Shannon entropy
 - Joint and conditional entropy
@@ -263,6 +350,24 @@ Information theory for ML/DL:
 - Cross-entropy loss
 - Maximum entropy principle
 - Applications in ML/DL (feature selection, model compression, uncertainty)
+
+### 🔌 API & Backend
+
+### 34. [REST APIs Guide](./learn-rest-apis.md)
+Complete REST API design guide:
+- REST principles and HTTP fundamentals
+- Resource naming and URI design
+- Authentication (JWT, OAuth), rate limiting
+- Error handling and versioning
+- Practical examples with FastAPI and Flask
+- REST vs GraphQL comparison
+
+### 35. [GraphQL Guide](./learn-graphql.md)
+Complete GraphQL guide:
+- Queries, mutations, subscriptions
+- Schema design and type system
+- Variables, fragments, directives
+- Best practices and patterns
 
 ## 💻 Practical Examples
 
@@ -335,6 +440,12 @@ python examples/05_text_classification_lstm.py
 13. Deepen [Python](./ml/learn-python-deep.md) programming skills
 14. Build [Agentic AI](./ai/learn-agentic-ai.md) systems with LangChain, LlamaIndex, and CrewAI
 15. Explore [Generative AI](./ai/learn-generative-ai.md) and [LLMs/RAG](./ai/learn-llms-rag.md)
+16. Study [Graph Neural Networks](./ml/learn-graph-neural-networks.md), [Federated Learning](./ml/learn-federated-learning.md), [Causal Inference](./ml/learn-causal-inference.md)
+17. Master [Vision Transformers](./ml/learn-vision-transformers.md) and [Multimodal AI](./ai/learn-multimodal-ai.md)
+18. Learn [REST APIs](./learn-rest-apis.md) for backend development
+19. Explore [Model Compression](./ml/learn-model-compression.md) for deployment
+20. Study [Self-Supervised Learning](./ml/learn-self-supervised-learning.md) for pretraining
+21. Deep-dive [LLM Training & Alignment](./ai/learn-llm-training-alignment.md), [Vector DBs & Retrieval](./ai/learn-vector-databases-retrieval.md), [Agentic Reasoning](./ai/learn-agentic-reasoning.md)
 
 ## 🎯 Key Concepts Covered
 

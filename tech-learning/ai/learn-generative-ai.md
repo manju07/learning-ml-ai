@@ -629,6 +629,77 @@ for prompt in prompts:
 
 ---
 
+## Advanced Generative Techniques
+
+### LoRA (Low-Rank Adaptation)
+
+**LoRA** fine-tunes diffusion models and LLMs with minimal parameters by learning low-rank updates to weight matrices.
+
+**Idea**: Instead of updating W, learn ΔW = A·B where A ∈ ℝ^(d×r), B ∈ ℝ^(r×k), r ≪ min(d,k).
+
+```python
+# LoRA for Stable Diffusion
+# pip install diffusers peft
+
+from diffusers import StableDiffusionPipeline
+from peft import LoraConfig, get_peft_model
+
+pipe = StableDiffusionPipeline.from_pretrained("runwayml/stable-diffusion-v1-5")
+lora_config = LoraConfig(r=8, lora_alpha=32, target_modules=["to_q", "to_v"])
+pipe.unet = get_peft_model(pipe.unet, lora_config)
+# Train on custom data - only ~1% of params updated
+```
+
+### ControlNet
+
+**ControlNet** adds spatial control to diffusion models (e.g., edges, depth, poses).
+
+```python
+from diffusers import StableDiffusionControlNetPipeline, ControlNetModel
+from diffusers.utils import load_image
+
+controlnet = ControlNetModel.from_pretrained("lllyasviel/control_v11p_sd15_canny")
+pipe = StableDiffusionControlNetPipeline.from_pretrained(
+    "runwayml/stable-diffusion-v1-5", controlnet=controlnet
+)
+
+# Canny edge image as control
+image = load_image("input.png")
+control_image = canny_detector(image)  # Edge map
+output = pipe("a beautiful landscape", image=control_image).images[0]
+```
+
+### Quantization for Diffusion Models
+
+Reduce memory and speed up inference:
+
+```python
+# 8-bit quantization
+pipe = StableDiffusionPipeline.from_pretrained(
+    "runwayml/stable-diffusion-v1-5",
+    torch_dtype=torch.float16  # FP16: 2x smaller, faster
+)
+pipe.enable_attention_slicing()  # Reduce VRAM
+pipe.enable_xformers_memory_efficient_attention()  # If xformers installed
+```
+
+### Inpainting and Outpainting
+
+```python
+from diffusers import StableDiffusionInpaintPipeline
+
+pipe = StableDiffusionInpaintPipeline.from_pretrained("runwayml/stable-diffusion-inpainting")
+# mask: 1 = region to fill
+result = pipe(prompt="a dog", image=image, mask_image=mask).images[0]
+```
+
+### SDXL and Refiners
+
+- **SDXL**: Higher resolution (1024×1024), two-stage (base + refiner)
+- **Refiner**: Second model polishes output
+
+---
+
 ## Best Practices
 
 1. **Start with Pre-trained Models**: Use Stable Diffusion, GPT, etc.
