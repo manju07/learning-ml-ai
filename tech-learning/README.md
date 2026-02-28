@@ -404,7 +404,20 @@ Complete OpenAI Agents SDK guide:
 - MCP integration
 - Production best practices
 
-### 40. [LangGraph & Agent Orchestration Guide](./ai/learn-langgraph-agent-orchestration.md)
+### 40. [Model Context Protocol (MCP) Guide](./ai/learn-model-context-protocol.md)
+Complete MCP guide:
+- Architecture (Host, Client, Server)
+- Transport layer (stdio, Streamable HTTP)
+- Tools: discovery, invocation, structured outputs, error handling
+- Resources: URIs, templates, subscriptions, annotations
+- Prompts: templates, arguments, messages
+- Sampling: server-initiated LLM calls
+- Building MCP servers with FastMCP (Python)
+- Building MCP clients
+- Integration with OpenAI Agents SDK and LangChain
+- Security considerations and best practices
+
+### 41. [LangGraph & Agent Orchestration Guide](./ai/learn-langgraph-agent-orchestration.md)
 Complete Agent Orchestration guide:
 - LangGraph fundamentals (state, nodes, edges)
 - Conditional routing and cycles
@@ -415,7 +428,7 @@ Complete Agent Orchestration guide:
 - Model Context Protocol (MCP)
 - Practical examples
 
-### 41. [Multimodal AI Guide](./ai/learn-multimodal-ai.md)
+### 42. [Multimodal AI Guide](./ai/learn-multimodal-ai.md)
 Complete Multimodal AI guide:
 - CLIP contrastive learning
 - Vision-Language models (LLaVA, BLIP-2)
@@ -425,7 +438,7 @@ Complete Multimodal AI guide:
 
 ### 📐 Mathematics Foundations
 
-### 42. [Linear Algebra Guide](./ml/learn-linear-algebra.md)
+### 43. [Linear Algebra Guide](./ml/learn-linear-algebra.md)
 Essential linear algebra for ML/DL:
 - Vectors and matrices fundamentals
 - Matrix operations (multiplication, transpose, inverse)
@@ -436,7 +449,7 @@ Essential linear algebra for ML/DL:
 - Norms and distances
 - Applications in ML/DL (PCA, neural networks, attention)
 
-### 43. [Calculus Guide](./ml/learn-calculus.md)
+### 44. [Calculus Guide](./ml/learn-calculus.md)
 Calculus fundamentals for ML/DL:
 - Functions, limits, and continuity
 - Derivatives and differentiation rules
@@ -447,7 +460,7 @@ Calculus fundamentals for ML/DL:
 - Constrained optimization (Lagrange multipliers)
 - Applications in ML/DL (loss functions, training)
 
-### 44. [Probability & Statistics Guide](./ml/learn-probability-statistics.md)
+### 45. [Probability & Statistics Guide](./ml/learn-probability-statistics.md)
 Probability and statistics for ML/DL:
 - Probability fundamentals and random variables
 - Probability distributions (Normal, Binomial, Poisson)
@@ -459,7 +472,7 @@ Probability and statistics for ML/DL:
 - Maximum Likelihood Estimation (MLE)
 - Applications in ML/DL (loss functions, regularization, uncertainty)
 
-### 45. [Optimization Guide](./ml/learn-optimization.md)
+### 46. [Optimization Guide](./ml/learn-optimization.md)
 Optimization methods for ML/DL:
 - Convex optimization fundamentals
 - Gradient-based methods (GD, Momentum, NAG)
@@ -470,7 +483,7 @@ Optimization methods for ML/DL:
 - Non-convex optimization (simulated annealing)
 - Hyperparameter optimization (grid search, random search, Bayesian)
 
-### 46. [Information Theory Guide](./ml/learn-information-theory.md)
+### 47. [Information Theory Guide](./ml/learn-information-theory.md)
 Information theory for ML/DL:
 - Information content and Shannon entropy
 - Joint and conditional entropy
@@ -482,7 +495,7 @@ Information theory for ML/DL:
 
 ### 🔌 API & Backend
 
-### 47. [REST APIs Guide](./learn-rest-apis.md)
+### 48. [REST APIs Guide](./learn-rest-apis.md)
 Complete REST API design guide:
 - REST principles and HTTP fundamentals
 - Resource naming and URI design
@@ -491,7 +504,7 @@ Complete REST API design guide:
 - Practical examples with FastAPI and Flask
 - REST vs GraphQL comparison
 
-### 48. [GraphQL Guide](./learn-graphql.md)
+### 49. [GraphQL Guide](./learn-graphql.md)
 Complete GraphQL guide:
 - Queries, mutations, subscriptions
 - Schema design and type system
