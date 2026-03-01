@@ -16,6 +16,7 @@ Comprehensive documentation for **Software Architects** and **Principal Engineer
 | [08-security-architecture.md](./08-security-architecture.md) | Zero Trust, OAuth2, mTLS, secrets management |
 | [09-observability-sre.md](./09-observability-sre.md) | Metrics, tracing, logging, SRE, SLIs/SLOs |
 | [10-domain-driven-design.md](./10-domain-driven-design.md) | DDD, bounded contexts, aggregates, tactical patterns |
+| [11-performance-engineering.md](./11-performance-engineering.md) | JVM tuning, profiling, load testing, capacity planning |
 
 ## Learning Path for Architects
 

@@ -525,6 +525,7 @@ See the [software-architecture](./software-architecture/) folder for comprehensi
 - **[08 Security Architecture](./software-architecture/08-security-architecture.md)** — OAuth2, mTLS, Zero Trust, secrets management
 - **[09 Observability & SRE](./software-architecture/09-observability-sre.md)** — SLIs/SLOs, distributed tracing, OpenTelemetry
 - **[10 Domain-Driven Design](./software-architecture/10-domain-driven-design.md)** — Bounded contexts, aggregates, tactical patterns
+- **[11 Performance Engineering](./software-architecture/11-performance-engineering.md)** — JVM tuning, profiling, load testing, capacity planning
 
 ## 💻 Practical Examples
 
