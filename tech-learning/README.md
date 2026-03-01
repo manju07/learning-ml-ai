@@ -511,6 +511,21 @@ Complete GraphQL guide:
 - Variables, fragments, directives
 - Best practices and patterns
 
+### 🏗️ Software Architecture & Principal Engineer
+
+See the [software-architecture](./software-architecture/) folder for comprehensive docs for architects and principal engineers:
+
+- **[01 Distributed Systems](./software-architecture/01-distributed-systems.md)** — CAP, PACELC, consistency models, Raft, 2PC, Saga
+- **[02 Microservices](./software-architecture/02-microservices-architecture.md)** — Decomposition, API Gateway, service mesh, resilience
+- **[03 Database Scalability](./software-architecture/03-database-scalability.md)** — Replication, sharding, caching, SQL vs NoSQL
+- **[04 Event-Driven Architecture](./software-architecture/04-event-driven-architecture.md)** — Event sourcing, CQRS, Kafka, outbox pattern
+- **[05 System Design Patterns](./software-architecture/05-system-design-patterns.md)** — Load balancing, rate limiting, circuit breaker
+- **[06 API Design](./software-architecture/06-api-design-comprehensive.md)** — REST, GraphQL, gRPC comparison and best practices
+- **[07 Cloud & Kubernetes](./software-architecture/07-cloud-infrastructure-kubernetes.md)** — Containers, K8s, IaC, multi-region
+- **[08 Security Architecture](./software-architecture/08-security-architecture.md)** — OAuth2, mTLS, Zero Trust, secrets management
+- **[09 Observability & SRE](./software-architecture/09-observability-sre.md)** — SLIs/SLOs, distributed tracing, OpenTelemetry
+- **[10 Domain-Driven Design](./software-architecture/10-domain-driven-design.md)** — Bounded contexts, aggregates, tactical patterns
+
 ## 💻 Practical Examples
 
 See the [examples](./examples/) directory for runnable code examples:
@@ -592,6 +607,15 @@ python examples/05_text_classification_lstm.py
 23. Build [AI Automation](./ai/learn-ai-automation.md) pipelines, master [AI for Code](./ai/learn-ai-for-code.md) and [LLM Ops](./ai/learn-ai-observability-llmops.md), explore [Speech & Voice AI](./ai/learn-speech-voice-ai.md)
 24. Study [State Space Models & Mamba](./ml/learn-state-space-models.md) as Transformer alternative, practice [Data-Centric AI](./ml/learn-synthetic-data-datacentric.md)
 25. Master [LangGraph](./ai/learn-langgraph-agent-orchestration.md) for agent orchestration, study [AI Safety](./ai/learn-ai-safety-red-teaming.md) for responsible deployment
+
+### Software Architect / Principal Engineer Path
+1. Start with [Distributed Systems](./software-architecture/01-distributed-systems.md) — CAP, consistency, consensus
+2. Study [Database Scalability](./software-architecture/03-database-scalability.md) — replication, sharding, caching
+3. Learn [Microservices](./software-architecture/02-microservices-architecture.md) and [Event-Driven Architecture](./software-architecture/04-event-driven-architecture.md)
+4. Master [System Design Patterns](./software-architecture/05-system-design-patterns.md) — resilience, rate limiting
+5. Deep-dive [API Design](./software-architecture/06-api-design-comprehensive.md), [Cloud & K8s](./software-architecture/07-cloud-infrastructure-kubernetes.md)
+6. Build production systems with [Security](./software-architecture/08-security-architecture.md), [Observability & SRE](./software-architecture/09-observability-sre.md)
+7. Apply [Domain-Driven Design](./software-architecture/10-domain-driven-design.md) for complex domains
 
 ## 🎯 Key Concepts Covered
 
@@ -700,6 +724,18 @@ python examples/05_text_classification_lstm.py
 - **Probability & Statistics**: Distributions, Bayes' theorem, MLE, hypothesis testing
 - **Optimization**: Gradient descent, adaptive methods, constrained optimization
 - **Information Theory**: Entropy, KL divergence, mutual information, cross-entropy
+
+### Software Architecture & Principal Engineer
+- **Distributed Systems**: CAP, PACELC, consistency, Raft, 2PC, Saga
+- **Microservices**: Decomposition, API Gateway, service mesh, resilience patterns
+- **Database Scalability**: Replication, sharding, caching, SQL vs NoSQL
+- **Event-Driven**: Event sourcing, CQRS, Kafka, outbox pattern
+- **System Design**: Load balancing, rate limiting, circuit breaker
+- **API Design**: REST, GraphQL, gRPC comparison
+- **Cloud & K8s**: Containers, Kubernetes, IaC, multi-region
+- **Security**: OAuth2, mTLS, Zero Trust
+- **Observability**: SLIs/SLOs, distributed tracing, OpenTelemetry
+- **Domain-Driven Design**: Bounded contexts, aggregates
 
 ## 🛠️ Tools & Frameworks
 

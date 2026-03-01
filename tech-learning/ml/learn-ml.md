@@ -13,6 +13,7 @@
 10. [Cross-Validation Strategies](#10-cross-validation-strategies)
 11. [Pipelines & Production Patterns](#11-pipelines--production-patterns)
 12. [Hyperparameter Tuning](#12-hyperparameter-tuning)
+13. [Common Pitfalls and How to Avoid Them](#13-common-pitfalls-and-how-to-avoid-them)
 
 ---
 
@@ -175,6 +176,43 @@ print("Q-table shape:", agent.Q.shape)
 | Semi-supervised | Mostly unlabeled | Few labels | Low-label settings |
 | Self-supervised | Unlabeled X | Pretext task | Pre-training large models |
 | Reinforcement | Environment | Reward signal | Games, robotics, control |
+
+### 1.7 Online Learning (Streaming)
+
+**Online learning** updates the model incrementally as each example arrives, without storing the full dataset. Suited for streaming data, real-time systems, or when data is too large to fit in memory.
+
+**Key characteristics:**
+- **Single pass** (or limited passes) over data
+- **Regret**: cumulative loss vs. best fixed predictor in hindsight
+- **Stochastic vs. adversarial**: data may be i.i.d. or chosen adversarially
+
+**Classic algorithms:**
+- **SGD (Stochastic Gradient Descent)**: Update \( w \leftarrow w - \eta \nabla L(w; x_i, y_i) \) per sample
+- **Perceptron**: Mistake-driven; update only on misclassification
+- **Online Gradient Descent (OGD)**: Regret bounds \( O(\sqrt{T}) \) for convex losses
+
+**Practical tips:**
+- Use `SGDClassifier` / `SGDRegressor` with `max_iter=1` and `tol=None` for true online mode
+- Decaying learning rate: \( \eta_t = \eta_0 / \sqrt{t} \) often gives better convergence
+- Mini-batches trade off variance (single sample) vs. compute (full batch)
+
+```python
+from sklearn.linear_model import SGDClassifier
+from sklearn.preprocessing import StandardScaler
+
+# Simulate streaming: fit incrementally with partial_fit
+sgd = SGDClassifier(loss='log_loss', max_iter=1, warm_start=True, random_state=42)
+scaler = StandardScaler()
+scaler.fit(X_train)  # Fit scaler on initial batch
+X_stream = scaler.transform(X_train)
+
+for i in range(0, len(X_stream), 50):  # Mini-batches of 50
+    X_batch = X_stream[i:i+50]
+    y_batch = y_train[i:i+50]
+    sgd.partial_fit(X_batch, y_batch, classes=np.unique(y_train))
+
+print(f"Online SGD accuracy: {sgd.score(scaler.transform(X_test), y_test):.4f}")
+```
 
 ---
 
@@ -1510,6 +1548,33 @@ print("\n=== Full Report ===")
 print(classification_report(y_test, y_pred))
 ```
 
+### 9.1.1 Calibration and Brier Score
+
+**Calibration** means predicted probabilities match empirical frequencies. Example: among samples for which the model predicts P(y=1)=0.7, roughly 70% should actually be positive. **Overconfident** models assign extreme probabilities (0.01 or 0.99) when they should be more uncertain.
+
+**Brier Score** (lower is better):
+\[
+\text{Brier} = \frac{1}{n}\sum_{i=1}^n (p_i - y_i)^2
+\]
+where \( p_i \) is predicted probability for the positive class. It penalizes both miscalibration and inaccuracy. A perfect model has Brier=0.
+
+**Reliability diagrams** visualize calibration: bin predicted probabilities and plot mean predicted vs. mean observed frequency per bin. A well-calibrated model follows the diagonal.
+
+```python
+from sklearn.calibration import calibration_curve, CalibratedClassifierCV
+
+# Check calibration
+prob_true, prob_pred = calibration_curve(y_test, y_proba, n_bins=10)
+# Plot: plt.plot(prob_pred, prob_true, 's-') vs diagonal
+
+# Recalibrate if needed (Platt scaling or isotonic regression)
+rf_calibrated = CalibratedClassifierCV(rf, method='isotonic', cv=5)
+rf_calibrated.fit(X_train, y_train)
+y_proba_cal = rf_calibrated.predict_proba(X_test)[:, 1]
+print(f"Original Brier:  {brier_score_loss(y_test, y_proba):.4f}")
+print(f"Calibrated Brier: {brier_score_loss(y_test, y_proba_cal):.4f}")
+```
+
 ### 9.2 ROC and PR Curves
 
 ```python
@@ -1613,6 +1678,41 @@ h, c, v = homogeneity_completeness_v_measure(y_true_cl, labels_pred)
 print(f"Homogeneity:               {h:.4f}")
 print(f"Completeness:              {c:.4f}")
 print(f"V-Measure:                 {v:.4f}")
+```
+
+### 9.5 Conformal Prediction (Uncertainty Quantification)
+
+**Conformal prediction** provides *distribution-free* finite-sample guarantees: prediction sets that contain the true label with a specified probability (e.g., 90%) without assuming the model or data distribution.
+
+**Idea:** Use a *nonconformity score* \( s(x, y) \) (e.g., \( |\hat{y} - y| \) for regression, or \( 1 - \hat{P}(y|x) \) for classification). On a held-out calibration set, compute scores for true labels. The \( (1-\alpha) \)-quantile of these scores determines the threshold. For a new \( x \), include in the prediction set all \( y \) whose score is below that threshold.
+
+**Regression (split conformal):**
+\[
+\hat{C}(x) = [\hat{\mu}(x) - Q_{1-\alpha}(s), \;\hat{\mu}(x) + Q_{1-\alpha}(s)]
+\]
+where \( Q_{1-\alpha} \) is the \( (1-\alpha) \) quantile of calibration residuals.
+
+```python
+# Split conformal for regression (conceptual)
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestRegressor
+
+X_tr, X_cal, y_tr, y_cal = train_test_split(X_ca, y_ca, test_size=0.2, random_state=42)
+X_cal, X_test, y_cal, y_test = train_test_split(X_cal, y_cal, test_size=0.5, random_state=42)
+
+model = RandomForestRegressor(n_estimators=100, random_state=42)
+model.fit(X_tr, y_tr)
+residuals_cal = np.abs(y_cal - model.predict(X_cal))
+alpha = 0.1  # 90% coverage
+q = np.quantile(residuals_cal, 1 - alpha)
+print(f"90% prediction interval half-width: {q:.4f}")
+
+# Prediction intervals for test set
+y_pred = model.predict(X_test)
+lower = y_pred - q
+upper = y_pred + q
+coverage = np.mean((y_test >= lower) & (y_test <= upper))
+print(f"Empirical coverage: {coverage:.4f} (target: {1-alpha})")
 ```
 
 ---
@@ -1951,6 +2051,37 @@ print("This is an unbiased estimate of generalization performance.")
 
 ---
 
+## 13. Common Pitfalls and How to Avoid Them
+
+| Pitfall | Symptom | Remedy |
+|---------|---------|--------|
+| **Data leakage** | Validation/test scores suspiciously high | Fit scalers/transformers only on train; use pipelines; avoid using future info in time series |
+| **Target leakage** | Features that encode the target (e.g., "days_since_purchase" when predicting churn) | Audit features for causal validity; exclude post-outcome variables |
+| **Train/test contamination** | Fitting on full data before split | Always split first, then fit preprocessors on train only |
+| **Wrong cross-validation** | Optimistic bias from tuning on same CV | Use nested CV: inner for tuning, outer for unbiased estimate |
+| **Ignoring class imbalance** | High accuracy but poor recall on minority class | Use stratified CV, class weights, PR-AUC, SMOTE, or oversampling |
+| **Scaling before split** | Information from test set influences training | Scale *after* train/test split, fitting on train only |
+| **Overfitting to validation** | Repeated tuning on same val set | Use held-out test set; consider multiple random seeds |
+| **Wrong metric** | Optimizing accuracy on imbalanced data | Use F1, PR-AUC, or domain-appropriate metric |
+| **Not scaling for SVM/KNN** | Poor performance despite good data | Standardize or min-max scale; these models are distance-sensitive |
+| **High cardinality in OHE** | Explosion of features, overfitting | Use target encoding, hashing, or embed high-cardinality columns |
+
+**Worked example — avoiding leakage:**
+
+```python
+# WRONG: Leakage via global scaling
+X_scaled = StandardScaler().fit_transform(X)  # Uses test data statistics!
+X_train, X_test, y_train, y_test = train_test_split(X_scaled, y, test_size=0.2)
+
+# CORRECT: Scale only on train
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
+scaler = StandardScaler()
+X_train_scaled = scaler.fit_transform(X_train)
+X_test_scaled = scaler.transform(X_test)  # Transform only, no fit
+```
+
+---
+
 ## Summary: Choosing the Right Algorithm
 
 ```
@@ -1973,6 +2104,56 @@ Problem Type?
 
 Rule of thumb: Always start simple (linear models), then add complexity.
 ```
+
+### Worked Example: End-to-End Classification Pipeline
+
+```python
+# Complete pipeline: load → split → preprocess → tune → evaluate → calibrate
+from sklearn.datasets import load_breast_cancer
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.model_selection import train_test_split, StratifiedKFold, cross_val_score
+from sklearn.calibration import CalibratedClassifierCV
+from sklearn.metrics import roc_auc_score, brier_score_loss, classification_report
+
+X, y = load_breast_cancer(return_X_y=True)
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, stratify=y, random_state=42)
+
+# Pipeline prevents leakage: scaler fit only on train
+pipe = Pipeline([
+    ('scaler', StandardScaler()),
+    ('clf', RandomForestClassifier(n_estimators=100, random_state=42))
+])
+
+# Cross-validate
+cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
+scores = cross_val_score(pipe, X_train, y_train, cv=cv, scoring='roc_auc')
+print(f"CV ROC-AUC: {scores.mean():.4f} ± {scores.std():.4f}")
+
+# Fit on full train
+pipe.fit(X_train, y_train)
+y_proba = pipe.predict_proba(X_test)[:, 1]
+print(f"Test ROC-AUC: {roc_auc_score(y_test, y_proba):.4f}")
+print(f"Test Brier:   {brier_score_loss(y_test, y_proba):.4f}")
+
+# Calibrate for better probability estimates
+pipe_cal = CalibratedClassifierCV(pipe, method='isotonic', cv=3)
+pipe_cal.fit(X_train, y_train)
+y_proba_cal = pipe_cal.predict_proba(X_test)[:, 1]
+print(f"Calibrated Brier: {brier_score_loss(y_test, y_proba_cal):.4f}")
+print(classification_report(y_test, pipe_cal.predict(X_test)))
+```
+
+---
+
+## References
+
+- **Foundations**: Hastie, Tibshirani & Friedman. *The Elements of Statistical Learning* (2009). Springer.
+- **sklearn**: Pedregosa et al. *Scikit-learn: Machine Learning in Python* (2011). JMLR.
+- **Calibration**: Guo et al. *On Calibration of Modern Neural Networks* (2017). ICML.
+- **Conformal Prediction**: Vovk et al. *Algorithmic Learning in a Random World* (2005). Springer.
+- **Online Learning**: Shalev-Shwartz. *Online Learning and Online Convex Optimization* (2012). Foundations and Trends.
 
 | Algorithm | Complexity | Interpretable | Handles Non-linear | Handles Missing | Feature Scale |
 |-----------|-----------|---------------|-------------------|-----------------|---------------|

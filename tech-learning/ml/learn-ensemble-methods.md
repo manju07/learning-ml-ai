@@ -12,6 +12,8 @@
 9. [Advanced Ensemble Techniques](#advanced-ensemble-techniques)
 10. [Practical Examples](#practical-examples)
 11. [Best Practices](#best-practices)
+12. [Common Pitfalls](#common-pitfalls)
+13. [Complete Runnable Example](#complete-runnable-example)
 
 ---
 
@@ -21,10 +23,23 @@ Ensemble methods combine multiple models to improve predictive performance. They
 
 ### Why Ensembles Work
 
-- **Reduces Variance**: Averaging reduces overfitting
-- **Reduces Bias**: Different models capture different patterns
-- **Improves Robustness**: Less sensitive to noise
-- **Better Generalization**: Works well on unseen data
+**Variance reduction (Bagging):** For \( B \) base learners with identical bias and pairwise correlation \( \rho \), the variance of the average is:
+\[
+\text{Var}(\bar{f}) = \frac{1}{B}\left(1 + (B-1)\rho\right) \sigma^2
+\]
+When trees are decorrelated (e.g., Random Forest's feature subsampling), \( \rho \) is small and variance shrinks roughly by \( 1/B \).
+
+**Bias reduction (Boosting):** Sequentially adding weak learners (high bias, low variance) that fit residuals reduces the ensemble's bias. The final model is a sum of corrections.
+
+**Wisdom of crowds:** If base errors are uncorrelated, average error decreases as \( 1/\sqrt{B} \). Even partially correlated errors yield gains when individual accuracies exceed 50%.
+
+### Diversity–Accuracy Tradeoff
+
+Ensembles benefit when base models are:
+- **Accurate**: Individually better than random
+- **Diverse**: Make different mistakes
+
+The **diversity–accuracy tradeoff**: Very similar models (e.g., many shallow trees with same hyperparameters) have low diversity → limited gain from averaging. Very different models (e.g., random vs. expert) may include weak ones → accuracy suffers. **Optimal ensembles** balance strong base learners with sufficient diversity (different algorithms, feature subsets, or training data).
 
 ### Types of Ensembles
 
@@ -36,6 +51,10 @@ Ensemble methods combine multiple models to improve predictive performance. They
 ---
 
 ## Bagging
+
+### Conceptual Overview
+
+**Bootstrap Aggregating (Bagging)** trains \( B \) models on bootstrap samples (sample with replacement, same size as original). Predictions are averaged (regression) or majority-voted (classification). Each bootstrap sample leaves out ~37% of data (out-of-bag), useful for internal validation. **Key**: Base models should have low bias and high variance (e.g., deep unpruned trees); bagging reduces variance without increasing bias.
 
 ### Bootstrap Aggregating
 
@@ -123,6 +142,10 @@ et_clf.fit(X_train, y_train)
 ---
 
 ## Boosting
+
+### Conceptual Overview
+
+**Boosting** trains models **sequentially**: each new model focuses on examples the previous ensemble got wrong. Weights or residual targets emphasize hard examples. **AdaBoost** reweights samples by \( w_i \exp(-\alpha y_i h(x_i)) \) where \( \alpha \) is the learner weight; misclassified samples get higher weight. **Gradient Boosting** fits each new learner to the negative gradient of the loss — a generic formulation that works for any differentiable loss.
 
 ### AdaBoost
 
@@ -369,62 +392,85 @@ probabilities = cat_clf.predict_proba(X_test)
 
 ## Stacking
 
+### Stacking with Meta-Learner: Conceptual Overview
+
+**Stacking** (stacked generalization) uses a **meta-learner** to combine base model predictions. The key insight: base models' *predictions* become features for a second-level model.
+
+**Steps:**
+1. Split training data (or use CV) to generate **out-of-fold predictions** — each base model predicts on folds it wasn't trained on.
+2. Stack these predictions into a **meta-feature matrix** \( Z \in \mathbb{R}^{n \times M} \) where \( M \) is the number of base models.
+3. Train the **meta-learner** on \( (Z, y) \) to learn optimal weights/combinations.
+4. At test time: base models predict → meta-learner combines.
+
+**Why CV for meta-features?** Using in-sample predictions would leak information (base models saw the targets). Out-of-fold predictions simulate genuine "test" inputs for the meta-learner.
+
+**Meta-learner choices:**
+- **Logistic Regression**: Simple, interpretable weights per base model; good default.
+- **Ridge Regression**: For regression stacking; prevents overfitting.
+- **Light models**: Meta-learner should be simpler than base models to avoid overfitting the meta-features.
+
 ### Manual Stacking
 
 ```python
 from sklearn.ensemble import StackingClassifier, StackingRegressor
-from sklearn.linear_model import LogisticRegression
+from sklearn.linear_model import LogisticRegression, Ridge
 from sklearn.svm import SVC
 from sklearn.neighbors import KNeighborsClassifier
+from sklearn.model_selection import cross_val_predict
+import numpy as np
 
-# Base estimators
+# Base estimators — diverse models for better stacking
 base_estimators = [
     ('rf', RandomForestClassifier(n_estimators=100, random_state=42)),
-    ('svm', SVC(probability=True, random_state=42)),
+    ('svm', SVC(probability=True, random_state=42, kernel='rbf')),
     ('knn', KNeighborsClassifier(n_neighbors=5))
 ]
 
-# Meta-learner
-meta_learner = LogisticRegression()
+# Meta-learner: Logistic Regression learns optimal blend of base predictions
+meta_learner = LogisticRegression(C=1.0, max_iter=1000)
 
-# Stacking classifier
+# StackingClassifier uses cv=5 to generate OOF meta-features internally
 stacking_clf = StackingClassifier(
     estimators=base_estimators,
     final_estimator=meta_learner,
-    cv=5,  # Cross-validation for meta-features
-    stack_method='predict_proba',  # Use probabilities
+    cv=5,  # Critical: prevents target leakage into meta-features
+    stack_method='predict_proba',  # Use probabilities (richer than hard labels)
     n_jobs=-1
 )
 
 stacking_clf.fit(X_train, y_train)
 predictions = stacking_clf.predict(X_test)
+
+# Inspect meta-learner weights (which base model contributes most)
+print("Meta-learner coefficients:", stacking_clf.final_estimator_.coef_)
 ```
 
-### Advanced Stacking
+### Advanced Stacking: Multi-Level and Custom Meta-Features
 
 ```python
-# Multi-level stacking
+# Multi-level stacking: level-1 outputs become inputs to level-2
 level1_estimators = [
-    ('rf', RandomForestClassifier()),
-    ('xgb', xgb.XGBClassifier()),
-    ('lgb', lgb.LGBMClassifier())
+    ('rf', RandomForestClassifier(n_estimators=100, random_state=42)),
+    ('xgb', xgb.XGBClassifier(n_estimators=100, random_state=42)),
+    ('lgb', lgb.LGBMClassifier(n_estimators=100, random_state=42, verbose=-1))
 ]
 
-level2_estimator = LogisticRegression()
+level2_estimator = LogisticRegression(C=0.1)  # Regularization for meta-level
 
-# First level
 level1_clf = StackingClassifier(
     estimators=level1_estimators,
     final_estimator=level2_estimator,
     cv=5
 )
 
-# Second level (stack on top)
-final_clf = StackingClassifier(
-    estimators=[('level1', level1_clf)],
+# Optional: Add original features to meta-features (passthrough)
+stacking_with_features = StackingClassifier(
+    estimators=level1_estimators,
     final_estimator=LogisticRegression(),
-    cv=5
+    cv=5,
+    passthrough=True  # Concatenate X with predictions for meta-learner
 )
+stacking_with_features.fit(X_train, y_train)
 ```
 
 ---
@@ -472,6 +518,52 @@ probabilities = voting_clf_soft.predict_proba(X_test)
 
 ## Advanced Ensemble Techniques
 
+### Bayesian Model Averaging (BMA)
+
+**BMA** combines models by weighting each according to its posterior probability given the data:
+\[
+P(y|x, D) = \sum_{m=1}^{M} P(y|x, m) \, P(m|D)
+\]
+where \( P(m|D) \propto P(D|m) P(m) \) is the posterior probability of model \( m \). BMA naturally balances model fit (likelihood) with complexity (prior).
+
+**Practical approximation:** Use BIC or AIC to estimate \( P(D|m) \), then softmax to get weights:
+\[
+w_m = \frac{e^{-\text{BIC}_m/2}}{\sum_j e^{-\text{BIC}_j/2}}
+\]
+
+```python
+from sklearn.linear_model import LogisticRegression
+from sklearn.naive_bayes import GaussianNB
+from sklearn.tree import DecisionTreeClassifier
+import numpy as np
+
+def bma_weights(models, X_val, y_val):
+    """Compute BMA weights from validation log-likelihood (or BIC proxy)."""
+    scores = []
+    for m in models:
+        pred_proba = m.predict_proba(X_val)[:, 1]
+        pred_proba = np.clip(pred_proba, 1e-10, 1 - 1e-10)
+        # Negative log-likelihood (lower = better)
+        nll = -np.mean(y_val * np.log(pred_proba) + (1 - y_val) * np.log(1 - pred_proba))
+        scores.append(-nll)  # Higher = better
+    scores = np.array(scores)
+    # Softmax to get weights
+    exp_scores = np.exp(scores - scores.max())
+    return exp_scores / exp_scores.sum()
+
+# Example: BMA over 3 models
+models_bma = [
+    LogisticRegression(max_iter=1000).fit(X_train, y_train),
+    GaussianNB().fit(X_train, y_train),
+    DecisionTreeClassifier(max_depth=5).fit(X_train, y_train),
+]
+w = bma_weights(models_bma, X_val, y_val)
+print("BMA weights:", w)
+
+# Weighted average of predicted probabilities
+y_proba_bma = sum(w[i] * models_bma[i].predict_proba(X_test)[:, 1] for i in range(len(models_bma)))
+```
+
 ### Blending
 
 ```python
@@ -500,6 +592,32 @@ def blend_models(models, X_train, y_train, X_val, y_val, X_test):
     final_predictions = meta_model.predict_proba(test_features)
     
     return final_predictions
+```
+
+### Measuring and Encouraging Diversity
+
+```python
+def prediction_diversity(predictions_list):
+    """Average pairwise disagreement: higher = more diverse."""
+    n_models = len(predictions_list)
+    total_disagree = 0
+    count = 0
+    for i in range(n_models):
+        for j in range(i + 1, n_models):
+            total_disagree += np.mean(predictions_list[i] != predictions_list[j])
+            count += 1
+    return total_disagree / count if count > 0 else 0
+
+# Example: compare homogeneous vs diverse ensemble
+preds_rf = [RandomForestClassifier(n_estimators=50, random_state=i).fit(X_train, y_train).predict(X_val)
+            for i in range(5)]  # 5 similar RFs
+preds_mixed = [
+    RandomForestClassifier(n_estimators=50).fit(X_train, y_train).predict(X_val),
+    xgb.XGBClassifier(n_estimators=50).fit(X_train, y_train).predict(X_val),
+    LogisticRegression().fit(X_train, y_train).predict(X_val),
+]
+print("Diversity (5 RFs):", prediction_diversity(preds_rf))
+print("Diversity (RF+XGB+LR):", prediction_diversity(preds_mixed))  # Typically higher
 ```
 
 ### Ensemble Diversity
@@ -611,15 +729,87 @@ meta_model.fit(meta_X, y_val)
 
 ---
 
-## Resources
+## Common Pitfalls
+
+| Pitfall | Problem | Solution |
+|---------|---------|----------|
+| **Identical base models** | No diversity → little gain over single model | Vary algorithms, hyperparameters, or feature subsets |
+| **Stacking without CV** | Meta-learner trained on in-sample predictions → severe overfitting | Always use `cv=k` in StackingClassifier |
+| **Overfitting meta-learner** | Complex meta-model memorizes base predictions | Use simple meta-learner (e.g., LogisticRegression, Ridge) |
+| **Including weak models** | One bad model can drag ensemble down | Filter by minimum CV score; use weighted voting |
+| **Data leakage in blending** | Training meta-model on same fold used for base training | Use held-out validation set for meta-features |
+| **Too many base models** | Diminishing returns; increased compute and overfitting risk | 3–7 diverse, strong models usually sufficient |
+| **Ignoring calibration** | Ensemble probabilities may be poorly calibrated | Apply CalibratedClassifierCV on top of ensemble |
+
+---
+
+## Complete Runnable Example
+
+```python
+from sklearn.datasets import make_classification
+from sklearn.model_selection import train_test_split, cross_val_score
+from sklearn.preprocessing import StandardScaler
+from sklearn.metrics import roc_auc_score
+from sklearn.ensemble import (
+    RandomForestClassifier, GradientBoostingClassifier,
+    StackingClassifier, VotingClassifier
+)
+import xgboost as xgb
+import lightgbm as lgb
+import numpy as np
+
+X, y = make_classification(n_samples=2000, n_features=20, n_informative=15, random_state=42)
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, stratify=y, random_state=42)
+
+scaler = StandardScaler()
+X_train_s = scaler.fit_transform(X_train)
+X_test_s = scaler.transform(X_test)
+
+# Diverse base models
+base_models = [
+    ('rf', RandomForestClassifier(n_estimators=100, max_depth=10, random_state=42)),
+    ('gb', GradientBoostingClassifier(n_estimators=100, max_depth=5, random_state=42)),
+    ('xgb', xgb.XGBClassifier(n_estimators=100, max_depth=6, use_label_encoder=False, eval_metric='logloss')),
+    ('lgb', lgb.LGBMClassifier(n_estimators=100, max_depth=6, verbose=-1))
+]
+
+# Individual CV scores
+for name, model in base_models:
+    scores = cross_val_score(model, X_train_s, y_train, cv=5, scoring='roc_auc')
+    print(f"{name}: {scores.mean():.4f} ± {scores.std():.4f}")
+
+# Soft voting ensemble
+voting = VotingClassifier(estimators=base_models, voting='soft')
+voting.fit(X_train_s, y_train)
+print(f"Voting ROC-AUC: {cross_val_score(voting, X_train_s, y_train, cv=5, scoring='roc_auc').mean():.4f}")
+
+# Stacking with meta-learner
+from sklearn.linear_model import LogisticRegression
+stacking = StackingClassifier(
+    estimators=base_models,
+    final_estimator=LogisticRegression(C=1.0, max_iter=1000),
+    cv=5,
+    stack_method='predict_proba'
+)
+stacking.fit(X_train_s, y_train)
+y_proba_stack = stacking.predict_proba(X_test_s)[:, 1]
+print(f"Stacking Test ROC-AUC: {roc_auc_score(y_test, y_proba_stack):.4f}")
+```
+
+---
+
+## Resources and References
 
 - **XGBoost**: xgboost.readthedocs.io
 - **LightGBM**: lightgbm.readthedocs.io
 - **CatBoost**: catboost.ai
-- **Papers**: 
-  - Random Forest (2001)
-  - XGBoost (2016)
-  - LightGBM (2017)
+- **Papers & Books**:
+  - Breiman, L. *Random Forests* (2001). Machine Learning.
+  - Chen & Guestrin. *XGBoost: A Scalable Tree Boosting System* (2016). KDD.
+  - Ke et al. *LightGBM: A Highly Efficient Gradient Boosting Decision Tree* (2017). NIPS.
+  - Wolpert, D. *Stacked Generalization* (1992). Neural Networks.
+  - Ho, T.K. *The Random Subspace Method for Constructing Decision Forests* (1998). IEEE TPAMI.
+  - Raftery et al. *Bayesian Model Averaging for Linear Regression Models* (1997). JASA.
 
 ---
 
