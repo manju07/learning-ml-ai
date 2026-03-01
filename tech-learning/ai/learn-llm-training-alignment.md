@@ -11,7 +11,10 @@
 8. [Parameter-Efficient Fine-Tuning](#parameter-efficient-fine-tuning)
 9. [Practical Examples](#practical-examples)
 10. [Advanced Topics](#advanced-topics)
-11. [Best Practices](#best-practices)
+11. [Common Pitfalls and Troubleshooting](#common-pitfalls-and-troubleshooting)
+12. [Production Considerations](#production-considerations)
+13. [Best Practices](#best-practices)
+14. [References](#references)
 
 ---
 
@@ -262,6 +265,18 @@ L_DPO = -E[ log σ( β * (log π(y_w|x)/π_ref(y_w|x) - log π(y_l|x)/π_ref(y_l
 - y_l: rejected (loser)
 - β: temperature
 
+### RLHF vs DPO: When to Use Which
+
+| Aspect | RLHF | DPO |
+|--------|------|-----|
+| **Reward model** | Separate RM trained on preferences | Implicit in loss; no RM |
+| **Optimization** | RL (PPO); unstable at times | Supervised; single loss |
+| **Complexity** | High (RM + PPO, many hyperparams) | Lower; similar to SFT |
+| **Stability** | Sensitive to KL, advantage scaling | Generally more stable |
+| **Use case** | Complex/composite rewards; fine-grained control | Preference data; simpler pipeline |
+
+**Default choice**: Prefer DPO for most alignment tasks. Use RLHF when you need a standalone reward model (e.g., for online ranking or deployment-time scoring).
+
 ### Advantages over RLHF
 
 - No reward model training
@@ -300,7 +315,12 @@ trainer.train()
 
 ## Constitutional AI
 
-**Constitutional AI** (Anthropic): Use principles (constitution) for self-critique and revision instead of human labels for harmlessness.
+**Constitutional AI** (Anthropic, 2022) reduces harm using a set of **principles** (a "constitution") instead of per-comparison human labels. The model critiques and revises its own outputs according to these principles, producing (prompt, revised_response) pairs for training.
+
+### Two Stages
+
+1. **RCIHF (RL from AI Feedback)**: Generate harmful prompts → model responds → AI critic rewrites using constitution → train on revised responses
+2. **Constitutional preference**: Generate pairs; AI selects preferred response per principle → train preference model, then RL/DPO
 
 ### Process
 
@@ -312,7 +332,36 @@ trainer.train()
 ### Example Principles
 
 - "Choose the response that is most helpful and harmless"
+- "Choose the response that refuses to comply with harmful requests"
 - "Choose the response that doesn't assume things about the user"
+
+### Implementation Sketch
+
+```python
+def constitutional_revision(prompt, response, principles, llm):
+    """
+    Use an AI model to revise a response according to a randomly chosen principle.
+    """
+    principle = random.choice(principles)
+    revision_prompt = f"""
+    Principle: {principle}
+    Original request: {prompt}
+    Response: {response}
+
+    Revise the response to better follow the principle. Output only the revised response.
+    """
+    revised = llm.generate(revision_prompt)
+    return revised
+
+# Build preference data: revised is preferred over original
+def build_constitutional_preferences(prompts, base_model, principles, llm):
+    pairs = []
+    for prompt in prompts:
+        original = base_model.generate(prompt)  # May be harmful
+        revised = constitutional_revision(prompt, original, principles, llm)
+        pairs.append({"prompt": prompt, "chosen": revised, "rejected": original})
+    return pairs
+```
 
 ---
 
@@ -401,28 +450,53 @@ trainer = SFTTrainer(
 trainer.train()
 ```
 
-### Example 3: Reward Model Training
+### Example 3: Reward Model Training (with Comments)
 
 ```python
-from transformers import AutoModelForSequenceClassification
+from transformers import AutoModelForCausalLM, AutoTokenizer
+import torch
+import torch.nn as nn
 import torch.nn.functional as F
 
 class RewardModel(nn.Module):
+    """
+    Reward model: base LM + scalar head. Outputs single value per (prompt, response).
+    Use last-token hidden state to capture full-sequence representation.
+    """
     def __init__(self, base_model):
         super().__init__()
         self.model = base_model
         self.head = nn.Linear(base_model.config.hidden_size, 1)
-    
-    def forward(self, input_ids, attention_mask):
-        out = self.model(input_ids, attention_mask=attention_mask).last_hidden_state
-        return self.head(out[:, -1])  # Last token
 
-def rm_loss(rm, prompt, chosen, rejected, tokenizer):
-    tok_c = tokenizer(prompt + chosen, return_tensors="pt")
-    tok_r = tokenizer(prompt + rejected, return_tensors="pt")
-    r_c = rm(**tok_c).squeeze()
-    r_r = rm(**tok_r).squeeze()
-    return -F.logsigmoid(r_c - r_r).mean()
+    def forward(self, input_ids, attention_mask=None):
+        outputs = self.model(input_ids, attention_mask=attention_mask)
+        # Last non-padding token summarizes the full sequence
+        hidden = outputs.last_hidden_state[:, -1, :]
+        return self.head(hidden).squeeze(-1)
+
+def reward_model_loss(rm, tokenizer, batch):
+    """
+    Bradley-Terry loss: chosen should have higher reward than rejected.
+    batch: dict with 'prompt', 'chosen', 'rejected' or tokenized equivalents.
+    """
+    tok_chosen = tokenizer(
+        batch["prompt"] + batch["chosen"],
+        return_tensors="pt",
+        padding=True,
+        truncation=True,
+        max_length=512,
+    )
+    tok_rejected = tokenizer(
+        batch["prompt"] + batch["rejected"],
+        return_tensors="pt",
+        padding=True,
+        truncation=True,
+        max_length=512,
+    )
+    r_chosen = rm(input_ids=tok_chosen["input_ids"], attention_mask=tok_chosen["attention_mask"])
+    r_rejected = rm(input_ids=tok_rejected["input_ids"], attention_mask=tok_rejected["attention_mask"])
+    # -log sigmoid(r_w - r_l) = log(1 + exp(r_l - r_w))
+    return -F.logsigmoid(r_chosen - r_rejected).mean()
 ```
 
 ---
@@ -450,6 +524,68 @@ def rm_loss(rm, prompt, chosen, rejected, tokenizer):
 
 ---
 
+## Common Pitfalls and Troubleshooting
+
+### 1. Reward Hacking (RLHF)
+
+**Symptom**: Reward model score rises but human ratings drop.
+
+**Causes**: RM overfits to superficial cues (length, keywords); policy exploits RM.
+
+**Solutions**: Diverse preference data; hold-out validation; stronger KL penalty; ensemble RMs.
+
+### 2. Mode Collapse (DPO)
+
+**Symptom**: Short, generic, or repetitive responses.
+
+**Causes**: Beta too high; narrow preference data; no SFT diversity.
+
+**Solutions**: Lower beta (e.g., 0.05); mix in SFT data; use IPO/KTO variants; check for duplicate preferences.
+
+### 3. KL Explosion (RLHF)
+
+**Symptom**: Policy diverges from reference; incoherent outputs.
+
+**Causes**: KL penalty too low; learning rate too high; unstable advantages.
+
+**Solutions**: Increase beta; reduce LR; normalize advantages; adaptive KL targets.
+
+### 4. Preference Data Imbalance
+
+**Symptom**: Model biased toward certain styles (formal, long, etc.).
+
+**Solutions**: Balance pairs by length/topic; oversample rare categories; augment with synthetic preferences.
+
+### 5. Reference Model Mismatch
+
+**Symptom**: Unstable DPO loss or quality drop.
+
+**Solutions**: Use same tokenizer and architecture; freeze reference; ensure reference is SFT checkpoint.
+
+---
+
+## Production Considerations
+
+### Evaluation
+
+- **Human eval**: Sample outputs; rate helpfulness, harmlessness, honesty
+- **Benchmarks**: MT-Bench, TruthfulQA, BBQ, HHH alignment
+- **Red-teaming**: Adversarial prompts; jailbreak tests
+
+### Safety and Guardrails
+
+- **Output filters**: Block PII, harmful content, jailbreak patterns
+- **Input filters**: Reject clearly harmful prompts; rate-limit sensitive queries
+- **Monitoring**: Track reward scores; detect distribution shift
+
+### Versioning and Rollback
+
+- Tag checkpoints with data version and config
+- A/B test before full rollout
+- Maintain rollback to previous aligned model
+
+---
+
 ## Best Practices
 
 1. **Start with SFT** on diverse instructions
@@ -472,3 +608,14 @@ def rm_loss(rm, prompt, chosen, rejected, tokenizer):
 | Efficient | LoRA, QLoRA | Limited compute |
 
 **Libraries**: `trl`, `peft`, `bitsandbytes`, `transformers`
+
+---
+
+## References
+
+- [Training language models to follow instructions with human feedback](https://arxiv.org/abs/2203.02155) (InstructGPT) – Ouyang et al., 2022
+- [Direct Preference Optimization](https://arxiv.org/abs/2305.18290) – Rafailov et al., 2023
+- [Constitutional AI: Harmlessness from AI Feedback](https://arxiv.org/abs/2212.08073) – Bai et al., 2022
+- [Deep reinforcement learning from human preferences](https://arxiv.org/abs/1706.03741) – Christiano et al., 2017
+- [TRL: Transformer Reinforcement Learning](https://github.com/huggingface/trl) – Hugging Face
+- [QLoRA: Efficient Finetuning of Quantized LLMs](https://arxiv.org/abs/2305.14314) – Dettmers et al., 2023

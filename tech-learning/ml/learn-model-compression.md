@@ -12,12 +12,30 @@
 9. [Practical Examples](#practical-examples)
 10. [Advanced Topics](#advanced-topics)
 11. [Best Practices](#best-practices)
+12. [Common Pitfalls and Troubleshooting](#common-pitfalls-and-troubleshooting)
+13. [Benchmarks and SOTA References](#benchmarks-and-sota-references)
+14. [Further Reading](#further-reading)
 
 ---
 
 ## Introduction to Model Compression
 
 **Model compression** reduces the size and computational cost of neural networks while preserving accuracy. Essential for deployment on edge devices, mobile, and cost-effective inference.
+
+### Intuition: Why Compression Works
+
+Neural networks are **overparameterized**: many weights are redundant or contribute little. Quantization exploits that activations/weights need only coarse precision; pruning removes near-zero weights; distillation transfers knowledge from a large teacher into a smaller student. The goal is to shrink the model without losing the learned function.
+
+### When to Use Which Technique
+
+| Scenario | Best Choice |
+|---------|-------------|
+| Fast deployment, minimal accuracy drop | PTQ (post-training quantization) |
+| Need best accuracy after compression | QAT or distillation |
+| LLM on consumer GPU | GPTQ, AWQ, or GGUF 4-bit |
+| High sparsity for inference engines | Structured pruning |
+| Small student from large teacher | Knowledge distillation |
+| Fine-tune LLM on limited hardware | QLoRA (4-bit + LoRA) |
 
 ### Why Compress?
 
@@ -103,29 +121,32 @@ output = quantized_model(input)
 
 ### Static Quantization (Calibration)
 
+Static quantization fixes scale/zero_point from calibration data. Use for CNNs and models with predictable activation ranges.
+
 ```python
 # Static: both weights and activations quantized with calibration
 model.eval()
 
-# 1. Fuse Conv-Bn-ReLU
+# 1. Fuse Conv-Bn-ReLU (reduces overhead, improves accuracy)
 model_fused = torch.quantization.fuse_modules(
     model,
     [['conv1', 'bn1', 'relu1'], ['conv2', 'bn2', 'relu2']]
 )
 
-# 2. Set config
+# 2. Set quantization config (fbgemm for x86, qnnpack for ARM)
 model_fused.qconfig = torch.quantization.get_default_qconfig('fbgemm')
 
-# 3. Prepare
+# 3. Insert observers to record activation ranges
 model_prepared = torch.quantization.prepare(model_fused, inplace=False)
 
-# 4. Calibrate with representative data
+# 4. Calibrate: run forward passes to collect min/max statistics
 with torch.no_grad():
     for batch in calibration_loader:
         model_prepared(batch)
 
-# 5. Convert to quantized
+# 5. Convert observers to quantize/dequantize modules
 model_quantized = torch.quantization.convert(model_prepared, inplace=False)
+# Model now uses INT8; save with torch.save(model_quantized.state_dict(), ...)
 ```
 
 ### Per-Channel vs Per-Tensor
@@ -227,10 +248,23 @@ model = get_peft_model(model, lora_config)
 
 Pruning removes redundant weights (often small-magnitude) to create sparse models.
 
+### Intuition: What to Prune
+
+**Magnitude pruning**: Small weights contribute little to the output; removing them has minimal impact. **Importance-based pruning**: Score each weight by its effect on the loss (e.g., first-order Taylor expansion). For LLMs, **structured pruning** (whole attention heads or FFN dimensions) is easier to deploy than unstructured.
+
 ### Unstructured vs Structured
 
 - **Unstructured**: Remove individual weights (high sparsity, needs sparse kernels)
 - **Structured**: Remove entire channels/filters (easy to deploy, no special hardware)
+
+### Importance Metrics (Beyond Magnitude)
+
+| Metric | Formula/idea | When to use |
+|--------|--------------|-------------|
+| **L1** | \|w\| | Default; simple and effective |
+| **Taylor** | \|w · ∇_w L\| | Better for task-specific pruning |
+| **Random** | Baseline | Compare against |
+| **SNIP** | \|w · ∇_w L\| at init | Prune before training |
 
 ### Magnitude-Based Pruning
 
@@ -338,15 +372,32 @@ for batch, labels in train_loader:
 
 ### Response vs Feature Distillation
 
+| Type | What student mimics | When to use |
+|------|---------------------|-------------|
+| **Response** | Output logits (softmax) | Classification, generation |
+| **Feature** | Intermediate layer activations | Deeper transfer when student has fewer layers |
+| **Attention** | Attention maps | Transformer-to-Transformer |
+
 ```python
 # Response: match output logits (above)
-# Feature: match intermediate layer activations
+# Feature: match intermediate layer activations (may need projection if dims differ)
 
-def feature_distillation_loss(student_features, teacher_features):
-    """Match intermediate representations"""
+def feature_distillation_loss(student_features, teacher_features, proj=None):
+    """Match intermediate representations; proj maps student dim to teacher dim if needed."""
+    if proj is not None:
+        student_features = proj(student_features)
     return F.mse_loss(student_features, teacher_features)
 
-# Use at multiple layers for better transfer
+# TinyBERT-style: distill at every layer
+# student_layer_i ← teacher_layer_2i (e.g., 4-layer student from 12-layer teacher)
+def multi_layer_distillation(student, teacher, x, layer_pairs):
+    total_loss = 0
+    for s_layer, t_layer in layer_pairs:
+        s_feat = student.intermediate(s_layer, x)
+        with torch.no_grad():
+            t_feat = teacher.intermediate(t_layer, x)
+        total_loss += feature_distillation_loss(s_feat, t_feat)
+    return total_loss
 ```
 
 ### DistilBERT-Style
@@ -522,6 +573,55 @@ torch.onnx.export(model, dummy_input, "model.onnx", opset_version=14)
 5. **Validate on same metrics** as original model
 6. **Profile** latency and memory before/after
 7. **Use hardware-aware** quantization (different for CPU vs GPU)
+
+---
+
+## Common Pitfalls and Troubleshooting
+
+| Pitfall | Symptom | Fix |
+|---------|---------|-----|
+| **Calibration mismatch** | PTQ accuracy drops on OOD data | Calibrate on data from target domain; use dynamic quantization for varying inputs |
+| **Pruning too aggressively** | Sudden accuracy collapse | Prune gradually (e.g., 10% per epoch); use iterative pruning with fine-tuning |
+| **Distillation collapse** | Student ignores teacher | Increase α (hard label weight); lower temperature; check teacher quality |
+| **QAT divergence** | Loss NaN or explodes | Reduce learning rate; ensure fake quant modules are in train mode |
+| **LLM quantization quality** | High perplexity after 4-bit | Try AWQ over GPTQ; increase group_size; use 5-bit if supported |
+| **Per-channel scale overflow** | Quantized activations saturate | Use per-channel for Conv; check calibration range |
+
+### Debugging Quantization
+
+```python
+import torch
+# Verify quantization is applied
+def check_quantized_modules(model):
+    for name, mod in model.named_modules():
+        if hasattr(mod, 'weight') and hasattr(mod.weight, 'dtype'):
+            if 'quantized' in str(type(mod)).lower() or mod.weight.dtype != torch.float32:
+                print(f"{name}: {mod.weight.dtype}, scale={getattr(mod.weight, 'scale', 'N/A')}")
+```
+
+---
+
+## Benchmarks and SOTA References
+
+| Method | Model | Compression | Accuracy |
+|--------|-------|-------------|----------|
+| **GPTQ-4bit** | LLaMA-7B | ~4× smaller | <1% perplexity increase |
+| **AWQ-4bit** | LLaMA-7B | ~4× smaller | Often matches 16-bit |
+| **QLoRA** | 7B fine-tune | 4-bit base + LoRA | Near full fine-tune quality |
+| **DistilBERT** | BERT-base | 2× smaller, 2× faster | 97% of BERT on GLUE |
+| **Pruning (ZIP)** | BERT | 90% sparsity | ~3% accuracy drop |
+| **EfficientNet** | ImageNet | NAS-discovered | SOTA efficiency/accuracy trade-off |
+
+**Key papers**: GPTQ (Frantar et al.); AWQ (Lin et al.); QLoRA; DistilBERT; Torch Pruning.
+
+---
+
+## Further Reading
+
+- **Quantization**: [GPTQ: Accurate Post-Training Quantization](https://arxiv.org/abs/2210.17323), [AWQ](https://arxiv.org/abs/2306.00978)
+- **QLoRA**: [QLoRA: Efficient Finetuning of Quantized LLMs](https://arxiv.org/abs/2305.14314)
+- **Distillation**: [DistilBERT](https://arxiv.org/abs/1910.01108), [TinyBERT](https://arxiv.org/abs/1909.10351)
+- **Pruning**: [Torch Pruning](https://github.com/VainF/Torch-Pruning), [ZIP](https://arxiv.org/abs/2201.03689)
 
 ---
 

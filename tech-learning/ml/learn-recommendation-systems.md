@@ -7,16 +7,22 @@
 4. [Hybrid Methods](#hybrid-methods)
 5. [Matrix Factorization](#matrix-factorization)
 6. [Deep Learning for Recommendations](#deep-learning-for-recommendations)
-7. [Evaluation Metrics](#evaluation-metrics)
-8. [Cold Start Problem](#cold-start-problem)
-9. [Practical Examples](#practical-examples)
-10. [Best Practices](#best-practices)
+7. [Two-Tower and Dual-Encoder Models](#two-tower-and-dual-encoder-models)
+8. [Multi-Task Learning for Recommendations](#multi-task-learning-for-recommendations)
+9. [Evaluation Metrics](#evaluation-metrics)
+10. [Cold Start Problem](#cold-start-problem)
+11. [Pitfalls and Failure Modes](#pitfalls-and-failure-modes)
+12. [Benchmarks and Datasets](#benchmarks-and-datasets)
+13. [Practical Examples](#practical-examples)
+14. [Best Practices](#best-practices)
 
 ---
 
 ## Introduction to Recommendation Systems
 
-Recommendation systems predict user preferences and suggest items they might like. They're used by Netflix, Amazon, Spotify, and many other platforms.
+Recommendation systems predict user preferences and suggest items they might like. They're used by Netflix, Amazon, Spotify, and many other platforms. At their core, recsys address an **information overload** problem: given millions of items and sparse user feedback, how do we surface the right items to the right users at the right time?
+
+**Key paradigms**: (1) **Retrieval** (candidate generation)—reduce millions of items to hundreds; (2) **Ranking**—order candidates by relevance; (3) **Re-ranking**—apply business constraints, diversity, fairness. Industrial systems often use a funnel: retrieval → ranking → re-ranking.
 
 ### Types of Recommendations
 
@@ -38,7 +44,11 @@ Recommendation systems predict user preferences and suggest items they might lik
 
 ## Collaborative Filtering
 
+Collaborative filtering (CF) assumes **users who agreed in the past will agree in the future**. It relies purely on interaction data (ratings, clicks, purchases) without item attributes. CF excels when behavior is rich and item features are missing or noisy. **Sparsity** is the main challenge: the user-item matrix is typically 99%+ empty.
+
 ### User-Based Collaborative Filtering
+
+Finds users similar to the target user and recommends items those similar users liked. Works well when user bases are stable and preferences are coherent. **Scaling issue**: similarity computation is O(n²) in number of users.
 
 ```python
 import numpy as np
@@ -112,6 +122,8 @@ recommendations = cf.recommend(user_id=1, n=10)
 ```
 
 ### Item-Based Collaborative Filtering
+
+Uses item-item similarity: "users who liked X also liked Y." Often preferred over user-based because items are more stable than users, and item catalogs change less frequently. Better for **scalability** when items < users. Used by Amazon's "Customers who bought this also bought."
 
 ```python
 class ItemBasedCF:
@@ -277,6 +289,8 @@ class HybridRecommender:
 ---
 
 ## Matrix Factorization
+
+Matrix factorization assumes the rating matrix **R ≈ U × Vᵀ**: users and items lie in a latent space of dimension *k*. Each user is a *k*-dim vector; each item is a *k*-dim vector; predicted rating = dot product. This **latent factor** interpretation: dimensions can capture "action vs comedy," "depth vs entertainment," etc., even without explicit features.
 
 ### SVD (Singular Value Decomposition)
 
@@ -551,6 +565,42 @@ def recommend_new_item(item_features, content_model, n_users=10):
 
 ---
 
+## Pitfalls and Failure Modes
+
+| Pitfall | Description | Mitigation |
+|---------|-------------|------------|
+| **Filter bubbles** | Users only see similar content; diversity drops | Add diversity/exploration in ranking, MMR, slate diversity |
+| **Popularity bias** | Popular items dominate; long-tail items never surface | Inverse propensity scoring, calibration, exposure-aware loss |
+| **Cold start** | New users/items have no or few interactions | Content-based, transfer learning, exploration (bandits) |
+| **Data leakage** | Using future info (e.g., labels from post-click) in training | Strict temporal splits, avoid future features |
+| **Evaluation mismatch** | Offline metrics (NDCG) ≠ online metrics (CTR, revenue) | A/B test; use unbiased offline estimators (IPS) when possible |
+| **Sparse feedback** | Implicit feedback is noisy (clicks ≠ likes) | Handle position bias, use dwell time, multiple signals |
+| **Drift** | User preferences and item catalog change over time | Continuous retraining, online learning, periodic full retrains |
+| **Scalability** | CF similarity O(n²); ranking every pair O(n·m) | Two-tower retrieval, approximate nearest neighbors, caching |
+
+**Position bias**: Items higher in the list get more clicks regardless of relevance. Correct with **inverse propensity weighting** or **position-aware** models.
+
+---
+
+## Benchmarks and Datasets
+
+| Dataset | Scale | Task | Notes |
+|---------|-------|------|-------|
+| **MovieLens** (1M, 25M) | 6K–162K users, 4K–62K movies | Explicit ratings | Classical benchmark; cold-start variants |
+| **Netflix Prize** | 480K users, 18K movies | RMSE on ratings | Legacy; 10% improvement prize |
+| **Amazon Reviews** | Millions of users/items | Rating, purchase prediction | Multiple categories (Books, Electronics) |
+| **YouTube-8M** | 8M videos, 386K labels | Video recommendation | Large-scale, multi-label |
+| **MIND** (Microsoft) | News | CTR, diversity | News recommendation |
+| **RecSys Challenge** | Varies | Yearly competition | Real-world industrial data |
+
+**Typical metrics by task**:
+- **Rating prediction**: RMSE, MAE
+- **Ranking**: NDCG@K, MAP@K, MRR, Precision@K, Recall@K
+- **Implicit/CTR**: AUC, Log Loss, Precision/Recall
+- **Diversity**: Coverage, Gini, ILD (Intra-List Diversity)
+
+---
+
 ## Practical Examples
 
 ### Example 1: Movie Recommendation System
@@ -643,12 +693,20 @@ class ProductRecommender:
 
 ## Resources
 
-- **Surprise**: scikit-surprise.readthedocs.io
-- **Implicit**: github.com/benfred/implicit
-- **Papers**: 
-  - Collaborative Filtering (1992)
-  - Matrix Factorization (2009)
-  - Neural CF (2017)
+**Libraries**:
+- **Surprise**: scikit-surprise.readthedocs.io — SVD, KNN, etc.
+- **Implicit**: github.com/benfred/implicit — ALS for implicit feedback
+- **LightFM**: github.com/lyst/lightfm — Hybrid matrix factorization
+- **RecBole**: recbole.io — Comprehensive recsys toolkit
+
+**Papers & References**:
+- Resnick et al. (1994) — GroupLens: collaborative filtering
+- Koren et al. (2009) — Matrix factorization techniques (Netflix)
+- He et al. (2017) — Neural Collaborative Filtering
+- Cheng et al. (2016) — Wide & Deep
+- Yi et al. (2019) — Sampling-bias-corrected NCE for two-tower
+- Ma et al. (2018) — MMoE for multi-task learning
+- **RecSys Handbook** (Ricci et al.) — Comprehensive textbook
 
 ---
 
@@ -663,4 +721,13 @@ Recommendation systems are crucial for many applications. Key takeaways:
 5. **Consider Scalability**: Design for production
 
 Remember: Good recommendations improve user experience and business metrics!
+
+### Summary of Enhancements
+
+- **Deeper concepts**: Retrieval vs ranking vs re-ranking, sparsity, position bias
+- **Two-tower models**: Dual-encoder architecture for scalable retrieval with ANN
+- **Multi-task learning**: CTR/CVR and other MTL patterns (shared-bottom, MMoE)
+- **Pitfalls**: Filter bubbles, popularity bias, cold start, evaluation mismatch, drift
+- **Benchmarks**: MovieLens, Netflix, Amazon, MIND, RecSys Challenge
+- **References**: Key papers and libraries (LightFM, RecBole)
 

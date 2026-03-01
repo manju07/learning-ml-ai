@@ -5,19 +5,22 @@
 2. [Grid Search](#grid-search)
 3. [Random Search](#random-search)
 4. [Bayesian Optimization](#bayesian-optimization)
-5. [Optuna Framework](#optuna-framework)
-6. [Hyperopt Framework](#hyperopt-framework)
-7. [Ray Tune](#ray-tune)
-8. [Automated ML (AutoML)](#automated-ml-automl)
-9. [Early Stopping Strategies](#early-stopping-strategies)
-10. [Practical Examples](#practical-examples)
-11. [Best Practices](#best-practices)
+5. [Hyperband and ASHA](#hyperband-and-asha)
+6. [Optuna Framework](#optuna-framework)
+7. [Hyperopt Framework](#hyperopt-framework)
+8. [Ray Tune](#ray-tune)
+9. [Automated ML (AutoML)](#automated-ml-automl)
+10. [Early Stopping Strategies](#early-stopping-strategies)
+11. [Pitfalls and Failure Modes](#pitfalls-and-failure-modes)
+12. [Benchmarks](#benchmarks)
+13. [Practical Examples](#practical-examples)
+14. [Best Practices](#best-practices)
 
 ---
 
 ## Introduction to Hyperparameter Tuning
 
-Hyperparameter tuning optimizes model performance by finding the best hyperparameter values. Unlike model parameters (learned during training), hyperparameters are set before training.
+Hyperparameter tuning optimizes model performance by finding the best hyperparameter values. Unlike **model parameters** (learned during training, e.g., weights), **hyperparameters** are set before training and control the learning process. The search space is often high-dimensional and non-convex; evaluations are costly (minutes to hours per trial).
 
 ### Types of Hyperparameters
 
@@ -40,6 +43,8 @@ Hyperparameter tuning optimizes model performance by finding the best hyperparam
 ---
 
 ## Grid Search
+
+**Grid search** exhaustively evaluates every combination in the parameter grid. Simple and parallelizable. **Curse of dimensionality**: With d parameters and k values each, you need k^d evaluations. For d=5, k=5 → 3,125 trials. Often infeasible for expensive models. Use for 2–3 important parameters with coarse grids.
 
 ### Basic Grid Search
 
@@ -117,6 +122,8 @@ grid_search.fit(X_train, y_train)
 
 ## Random Search
 
+**Random search** samples hyperparameters from specified distributions. Bergstra & Bengio (2012) showed it often **outperforms grid search** with the same budget: random search explores the space more effectively; some parameters matter more than others, and random search doesn't waste budget on irrelevant dimensions. Use as a baseline before Bayesian methods.
+
 ### Basic Random Search
 
 ```python
@@ -174,6 +181,15 @@ random_search = RandomizedSearchCV(
 
 ## Bayesian Optimization
 
+**Bayesian optimization (BO)** builds a probabilistic surrogate model (typically a **Gaussian Process**, GP) of the objective from past evaluations, then uses an **acquisition function** to decide where to evaluate next. It balances **exploration** (uncertain regions) and **exploitation** (promising regions), making it sample-efficient for expensive black-box optimization.
+
+**Key components**:
+1. **Surrogate**: GP models f(x) ~ N(μ(x), σ²(x))
+2. **Acquisition**: EI (Expected Improvement), UCB (Upper Confidence Bound), or PI (Probability of Improvement)
+3. **Optimizer**: Maximize acquisition to get next hyperparameter config
+
+**When to use**: Expensive evaluations (e.g., training deep nets), limited budget, continuous/categorical mixed spaces. **When to avoid**: Very cheap evaluations (grid/random may suffice), very high dimensions (GP scales poorly).
+
 ### Using scikit-optimize
 
 ```bash
@@ -221,6 +237,67 @@ best_params = {
 print(f"Best parameters: {best_params}")
 print(f"Best score: {-result.fun:.4f}")
 ```
+
+---
+
+## Hyperband and ASHA
+
+**Hyperband** (Li et al., 2017) addresses the **bandit-based early stopping** problem: many hyperparameter configs are poor; we want to stop them early and allocate budget to promising ones. It extends **Successive Halving** (SH): run n configs for k epochs, keep the best n/η, run them for η·k epochs, repeat.
+
+**Idea**: Allocate total budget B across different "brackets." Each bracket runs Successive Halving with different (n, k) trade-offs: many configs few epochs vs few configs many epochs. Hyperband runs all brackets in parallel and returns the best config from any bracket.
+
+**ASHA** (Asynchronous Successive Halving Algorithm) is an asynchronous variant used in Ray Tune: trials can be promoted or stopped early without waiting for the full bracket. **Much more efficient** for distributed tuning.
+
+```python
+from ray import tune
+from ray.tune.schedulers import HyperBandScheduler, ASHAScheduler
+from ray.tune.search.optuna import OptunaSearch
+
+def train_fn(config):
+    """Training function: must support early stopping"""
+    model = build_model(config)
+    for epoch in range(config.get('max_epochs', 100)):
+        train_epoch(model)
+        val_acc = evaluate(model)
+        # Report intermediate metric for early stopping
+        tune.report(mean_accuracy=val_acc, training_iteration=epoch + 1)
+
+# Hyperband: stops poor configs early
+hyperband = HyperBandScheduler(
+    time_attr='training_iteration',
+    max_t=100,           # max iterations per config
+    grace_period=10,     # min iterations before stopping
+    reduction_factor=3,  # keep 1/3 of configs each rung
+    metric='mean_accuracy',
+    mode='max'
+)
+
+# ASHA: asynchronous, better for distributed
+asha = ASHAScheduler(
+    time_attr='training_iteration',
+    max_t=100,
+    grace_period=10,
+    reduction_factor=3,
+    metric='mean_accuracy',
+    mode='max'
+)
+
+# Run with ASHA
+analysis = tune.run(
+    train_fn,
+    config={
+        'lr': tune.loguniform(1e-4, 1e-1),
+        'batch_size': tune.choice([32, 64, 128]),
+        'max_epochs': 100
+    },
+    scheduler=asha,
+    num_samples=50,
+    metric='mean_accuracy',
+    mode='max'
+)
+```
+
+**When to use**: Training that supports early stopping (epochs), expensive per-epoch cost, many trials. **Not for**: Single-run models (e.g., one CV fit), very cheap evaluations.
 
 ---
 
@@ -547,6 +624,34 @@ plot_learning_curve(model, X_train, y_train)
 
 ---
 
+## Pitfalls and Failure Modes
+
+| Pitfall | Description | Mitigation |
+|---------|-------------|------------|
+| **Overfitting to validation** | Tuning too long overfits to validation set | Use nested CV; hold out final test set; limit n_trials |
+| **Search space** | Too narrow misses good regions; too wide wastes budget | Start broad, refine; use log-scale for learning rate |
+| **Noise** | CV scores are noisy; one good run may be luck | Use multiple seeds; report mean ± std; increase cv folds |
+| **Correlation of params** | Some params interact (e.g., lr × batch_size) | Use conditional search spaces; consider joint tuning |
+| **Budget exhaustion** | Bayesian/HPO stops before finding optimum | Set realistic timeout; use early stopping for expensive trials |
+| **Reproducibility** | Different runs give different "best" params | Set random seeds; fix n_trials; log all trials |
+| **Metric mismatch** | Optimizing accuracy when business cares about AUC | Align metric with deployment objective |
+| **Cold start (BO)** | GP needs a few points; first trials are random | Use random initialization (n_initial points); Latin hypercube |
+
+---
+
+## Benchmarks
+
+| Benchmark | Domain | Task | Notes |
+|-----------|--------|------|-------|
+| **HPO-B** | ML | Classification | Standardized HPO benchmarks (XGBoost, MLP, etc.) |
+| **NAS-Bench-101/201** | NAS | Architecture search | Tabular benchmarks for quick comparison |
+| **PD1** | Chemical | Molecular design | Black-box optimization |
+| **MLPerf** | DL | End-to-end | Includes HPO for training |
+
+**Typical metrics**: Best validation score, regret (gap to oracle), wall-clock time to reach target, sample efficiency (score vs. # evaluations).
+
+---
+
 ## Practical Examples
 
 ### Example 1: Complete Tuning Pipeline
@@ -662,10 +767,19 @@ def tune_multiple_models(X_train, y_train):
 
 ## Resources
 
-- **Optuna**: optuna.org
-- **Hyperopt**: github.com/hyperopt/hyperopt
-- **Ray Tune**: docs.ray.io/en/latest/tune
+**Frameworks**:
+- **Optuna**: optuna.org — Modern, pruning, visualization
+- **Hyperopt**: github.com/hyperopt/hyperopt — TPE, MongoDB for distributed
+- **Ray Tune**: docs.ray.io — Distributed, ASHA, Hyperband
+- **scikit-optimize**: scikit-optimize.github.io — GP-based BO
 - **Auto-sklearn**: automl.github.io/auto-sklearn
+- **TPOT**: epistasislab.github.io/tpot
+
+**Papers**:
+- Bergstra & Bengio (2012) — Random search for hyperparameters
+- Snoek et al. (2012) — Bayesian optimization with GP
+- Li et al. (2017) — Hyperband
+- Li et al. (2020) — ASHA (Asynchronous Successive Halving)
 
 ---
 
@@ -680,4 +794,12 @@ Hyperparameter tuning significantly improves model performance. Key takeaways:
 5. **Validate**: Always validate on hold-out set
 
 Remember: Good hyperparameters can make the difference between good and great models!
+
+### Summary of Enhancements
+
+- **Bayesian optimization**: Surrogate model, acquisition functions, when to use/avoid
+- **Hyperband & ASHA**: Successive Halving, early stopping for expensive training, code example
+- **Pitfalls**: Validation overfitting, search space, noise, reproducibility, metric mismatch
+- **Benchmarks**: HPO-B, NAS-Bench, MLPerf
+- **References**: Key papers (Hyperband, ASHA, GP-BO)
 

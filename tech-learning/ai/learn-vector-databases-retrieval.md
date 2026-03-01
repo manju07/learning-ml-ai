@@ -119,26 +119,47 @@ distances = cdist([query_embedding], doc_embeddings, metric='euclidean')[0]
 
 ## Approximate Nearest Neighbor (ANN)
 
-Exact k-NN is O(n) per query. ANN trades some accuracy for speed.
+Exact k-NN is O(n) per query and doesn't scale. **ANN** trades some accuracy for sublinear query time and often works well in practice because most applications only need *good enough* neighbors, not exact top-k.
+
+### HNSW vs IVF: When to Use Each
+
+| Aspect | HNSW (Hierarchical Navigable Small World) | IVF (Inverted File Index) |
+|--------|------------------------------------------|---------------------------|
+| **Structure** | Layered graph; each node links to "neighbors" at multiple resolution levels | Vectors clustered into Voronoi cells; each cell has an inverted list |
+| **Build** | O(n log n); incremental inserts supported | O(n); typically batch build; clustering step (k-means) |
+| **Query** | Greedy graph traversal from top layer down; O(log n) hops | Find nearest cluster centroids, then search only within those lists |
+| **Recall** | Typically 95–99% recall@10 with tuned params | Depends on `nlist`; often 80–95%; cluster boundary errors |
+| **Latency** | Very low, deterministic-ish | Low; can spike if query falls near cluster boundary |
+| **Memory** | Higher (graph edges stored) | Lower with PQ; IVF_PQ very compact |
+| **Updates** | Add/delete supported natively | Rebuild or use dynamic indices (IVF with overflow) |
+| **Best for** | Real-time search, frequent updates, high recall | Batch indexing, very large scale, memory-constrained |
+
+**HNSW intuition**: Imagine a "small world" graph where nodes are vectors. Short paths exist between similar vectors (like social networks—few hops to reach anyone). A hierarchy lets you start at coarse resolution and refine.
+
+**IVF intuition**: Partition space into regions (clusters). For a query, only search the nearest few regions. Risk: true nearest neighbors might live just across a cluster boundary.
+
+**Hybrid choice**: Use **HNSW** when latency and recall matter; use **IVF+PQ** when indexing billions of vectors and memory is critical.
 
 ### HNSW (Hierarchical Navigable Small World)
 
-- Graph-based
-- Build time: O(n log n)
-- Query: O(log n)
-- Good recall/speed tradeoff
+- Graph-based; each node has short- and long-range links
+- Build time: O(n log n); incremental inserts supported
+- Query: O(log n) with high recall
+- **Params**: `ef_construction` (build-time accuracy), `ef_search` (query-time accuracy), `M` (connections per node)
 
 ### IVF (Inverted File Index)
 
-- Cluster vectors
-- Search only in nearest cluster(s)
-- Faiss IVF_FLAT, IVF_PQ
+- Cluster vectors via k-means; each cluster = Voronoi cell
+- Search: find nearest centroid(s), then scan only those cells
+- **Params**: `nlist` (number of clusters)—too few = slow (large lists); too many = boundary errors
+- Faiss: `IVF_FLAT` (exact distances in cells), `IVF_PQ` (quantized for memory)
 
 ### Product Quantization (PQ)
 
-- Compress vectors to codes
-- Distance via lookup tables
-- Memory efficient
+- Split vectors into subvectors; quantize each subvector to a codebook
+- Distance via lookup tables; no raw vectors stored
+- Memory efficient: 128-dim float32 → 8 bytes with m=8
+- **Tradeoff**: Slight loss in accuracy; often combined with IVF (IVF_PQ)
 
 ### FAISS
 
@@ -254,7 +275,13 @@ results = client.search(collection_name="docs", query_vector=query_vec, limit=10
 
 ## Hybrid Search
 
-Combine **dense** (semantic) and **sparse** (BM25) for better recall.
+Combine **dense** (semantic) and **sparse** (BM25/lexical) for better recall. Dense alone can miss exact matches (IDs, names, rare terms); sparse alone misses paraphrases and synonyms. Hybrid catches both.
+
+**When to use hybrid**:
+- Domain-specific terms, IDs, acronyms (e.g., `SKU-12345`, `BERT`)
+- Cross-lingual or multilingual corpora
+- Technical docs with exact code snippets or error messages
+- Legal/medical where exact wording matters
 
 ### Reciprocal Rank Fusion (RRF)
 
@@ -270,6 +297,16 @@ def rrf(rankings_list, k=60):
 # dense_ranking = [2, 1, 5, 3, 4]
 # sparse_ranking = [1, 3, 2, 5, 4]
 # fused = rrf([dense_ranking, sparse_ranking])
+```
+
+**Weighted RRF**: Assign weights per retriever (e.g., 0.7 dense, 0.3 sparse) when one signal is stronger:
+```python
+def weighted_rrf(rankings_list, weights, k=60):
+    scores = {}
+    for rankings, w in zip(rankings_list, weights):
+        for rank, doc_id in enumerate(rankings):
+            scores[doc_id] = scores.get(doc_id, 0) + w / (k + rank + 1)
+    return sorted(scores.keys(), key=lambda x: scores[x], reverse=True)
 ```
 
 ### LangChain Hybrid
@@ -484,6 +521,32 @@ def hybrid_search(query, k=10):
 5. **Hybrid**: When keywords matter (names, IDs)
 6. **Metadata filtering**: Pre-filter before vector search when possible
 7. **Evaluation**: Recall@k, MRR on labeled (query, relevant_doc) pairs
+
+---
+
+## Pitfalls and Gotchas
+
+| Pitfall | Cause | Mitigation |
+|---------|-------|------------|
+| **Chunk boundary cutoff** | Context split mid-sentence or mid-concept | Use semantic chunking or overlap; favor natural boundaries |
+| **Embedding model mismatch** | Generic model for domain-specific text (code, legal) | Use domain models (e.g., `microsoft/codebert`, legal embeddings) |
+| **False sense of recall** | Testing on easy queries only | Include hard negatives, diverse query types |
+| **Dimension mismatch** | Changing embedding model after indexing | Version embeddings; reindex on model change |
+| **IVF boundary errors** | Query vector near cluster edge; true NN in adjacent cluster | Increase `nprobe` (clusters to search); or use HNSW |
+| **Reranker over-trust** | Reranker trained on different distribution | Validate reranker on your data; avoid over-trimming top-k |
+| **Hybrid dominance** | One retriever always wins in RRF | Tune weights; consider score normalization before fusion |
+| **Oversized chunks** | Chunk too large → diluted embedding | Smaller chunks (128–256) for precise retrieval; expand at generation time |
+
+---
+
+## References
+
+- **HNSW**: Malkov & Yashunin (2020) — *Efficient and robust approximate nearest neighbor search using Hierarchical Navigable Small World graphs*, IEEE TPAMI
+- **IVF, PQ**: Jégou et al. (2011) — *Product Quantization for Nearest Neighbor Search*
+- **Dense retrieval**: Karpukhin et al. (2020) — DPR, *Dense Passage Retrieval for Open-Domain Question Answering*
+- **ColBERT**: Khattab & Zaharia (2020) — *ColBERT: Efficient and Effective Passage Search via Contextualized Late Interaction*
+- **RRF**: Cormack et al. — Reciprocal Rank Fusion
+- **RAG survey**: Lewis et al. (2020) — *Retrieval-Augmented Generation for Knowledge-Intensive NLP*
 
 ---
 

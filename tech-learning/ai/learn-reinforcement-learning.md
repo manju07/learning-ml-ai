@@ -224,6 +224,29 @@ class SARSA:
 
 ## Policy-Based Methods
 
+### Policy Gradient Derivation (REINFORCE)
+
+The policy gradient theorem states that we can improve the expected return by ascending the gradient of the policy with respect to its parameters. The key insight: we want to increase the probability of actions that led to high returns and decrease the probability of actions that led to low returns.
+
+**Derivation outline:**
+
+1. **Objective**: Maximize expected cumulative reward \( J(\theta) = \mathbb{E}_{\tau \sim \pi_\theta}[R(\tau)] \), where \( \tau \) is a trajectory.
+
+2. **Gradient**:
+\[
+\nabla_\theta J(\theta) = \mathbb{E}_{\tau \sim \pi_\theta}\left[ \sum_{t=0}^{T-1} \nabla_\theta \log \pi_\theta(a_t|s_t) \cdot G_t \right]
+\]
+where \( G_t = \sum_{k=t}^{T-1} \gamma^{k-t} r_k \) is the return from time \( t \).
+
+3. **Unbiased estimator**: Sample a trajectory and use \( \sum_t \nabla_\theta \log \pi_\theta(a_t|s_t) \cdot G_t \) as the gradient estimate. This is the REINFORCE algorithm.
+
+4. **Baseline reduction**: Subtract a baseline \( b(s_t) \) (e.g., mean return or value estimate) to reduce variance without introducing bias:
+\[
+\nabla_\theta J(\theta) \approx \sum_t \nabla_\theta \log \pi_\theta(a_t|s_t) \cdot (G_t - b(s_t))
+\]
+
+**Why it works**: The log-derivative trick \( \nabla \log f = \frac{\nabla f}{f} \) lets us express the gradient as an expectation we can sample from.
+
 ### Policy Gradient
 
 ```python
@@ -296,6 +319,24 @@ class PolicyGradient:
 ---
 
 ## Actor-Critic Methods
+
+### Conceptual Overview: Why Actor-Critic?
+
+Actor-Critic methods combine two ideas:
+- **Actor**: A policy \( \pi_\theta(a|s) \) that selects actions (policy gradient).
+- **Critic**: A value function \( V_\phi(s) \) (or \( Q_\phi(s,a) \)) that estimates how good the current state/action is.
+
+**Advantages over pure policy gradients:**
+1. **Lower variance**: The critic provides a baseline—we use the *advantage* \( A(s,a) = Q(s,a) - V(s) \) instead of raw returns \( G_t \), drastically reducing variance.
+2. **Faster learning**: TD learning (bootstrap) updates the critic every step, not just at episode end.
+3. **Online updates**: Can learn from incomplete trajectories (no need to wait for episode termination).
+
+**Key equation—Actor update with advantage:**
+\[
+\nabla_\theta J(\theta) = \mathbb{E}\left[ \nabla_\theta \log \pi_\theta(a|s) \cdot A(s,a) \right], \quad A(s,a) = r + \gamma V(s') - V(s) \text{ (TD error)}
+\]
+
+**Architecture**: The actor and critic often share a feature backbone; the final layers split into policy head (softmax) and value head (scalar).
 
 ### Actor-Critic Implementation
 
@@ -668,6 +709,33 @@ class PrioritizedReplayBuffer:
         return [self.buffer[i] for i in indices], indices, weights
 ```
 
+### Generalized Advantage Estimation (GAE)
+
+```python
+def compute_gae(rewards, values, next_values, dones, gamma=0.99, lam=0.95):
+    """
+    GAE reduces variance of advantage estimates while limiting bias.
+    lam=0: TD(0), pure bootstrap. lam=1: Monte Carlo, no bootstrap.
+    lam≈0.95 is a common default.
+    """
+    advantages = np.zeros_like(rewards)
+    last_gae = 0
+
+    for t in reversed(range(len(rewards))):
+        if dones[t]:
+            next_value = 0
+            last_gae = 0
+        else:
+            next_value = next_values[t]
+
+        delta = rewards[t] + gamma * next_value - values[t]
+        last_gae = delta + gamma * lam * last_gae
+        advantages[t] = last_gae
+
+    returns = advantages + values
+    return advantages, returns
+```
+
 ### Double DQN
 
 ```python
@@ -689,6 +757,46 @@ class DoubleDQN(DQN):
 
 ---
 
+## Pitfalls and Common Mistakes
+
+1. **Sparse vs Dense Rewards**
+   - **Problem**: Sparse rewards (e.g., only at episode end) make credit assignment nearly impossible.
+   - **Fix**: Use reward shaping, curiosity-driven exploration, or imitation learning for initial policy.
+
+2. **Exploration Collapse**
+   - **Problem**: Policy collapses to a local optimum; agent stops exploring.
+   - **Fix**: Entropy regularization, gradual epsilon decay, or intrinsic motivation (e.g., RND).
+
+3. **Catastrophic Forgetting (Off-policy)**
+   - **Problem**: DQN/PPO forgets old strategies when learning new ones.
+   - **Fix**: Experience replay, target networks, PPO’s clipping to limit policy change.
+
+4. **Unstable Training (Value Overestimation)**
+   - **Problem**: Q-learning tends to overestimate Q-values (max over noisy estimates).
+   - **Fix**: Double DQN, dueling DQN, or clipped double Q-learning.
+
+5. **Reward Hacking**
+   - **Problem**: Agent exploits loopholes in the reward function instead of solving the intended task.
+   - **Fix**: Design robust reward functions; consider inverse reward design or human feedback (RLHF).
+
+6. **Hyperparameter Sensitivity**
+   - **Problem**: RL is highly sensitive to learning rate, discount factor, batch size, etc.
+   - **Fix**: Use well-tested defaults (e.g., Stable-Baselines3); grid or Bayesian search for critical params.
+
+7. **Sim-to-Real Gap**
+   - **Problem**: Policy trained in simulation fails in the real world due to dynamics mismatch.
+   - **Fix**: Domain randomization, system identification, or sim2real transfer methods.
+
+```python
+# Example: Entropy regularization to prevent exploration collapse
+def policy_loss_with_entropy(log_probs, advantages, entropy, ent_coef=0.01):
+    policy_loss = -(log_probs * advantages).mean()
+    entropy_loss = -entropy.mean()
+    return policy_loss - ent_coef * entropy_loss
+```
+
+---
+
 ## Best Practices
 
 1. **Start Simple**: Use Q-learning for discrete spaces
@@ -702,15 +810,24 @@ class DoubleDQN(DQN):
 
 ---
 
-## Resources
+## Resources and References
 
-- **OpenAI Gym**: Environment library
-- **Stable Baselines3**: RL algorithms
-- **Papers**: 
-  - Q-Learning (1992)
-  - DQN (2015)
-  - PPO (2017)
-- **Books**: Sutton & Barto RL Book
+### Libraries
+- **OpenAI Gym / Gymnasium**: Environment library
+- **Stable Baselines3**: Production-ready RL algorithms
+- **RLlib (Ray)**: Scalable distributed RL
+
+### Foundational Papers
+- Watkins, C. (1989). *Learning from Delayed Rewards*. Q-Learning.
+- Mnih et al. (2015). *Human-level control through deep reinforcement learning*. Nature. DQN.
+- van Hasselt et al. (2016). *Deep Reinforcement Learning with Double Q-learning*. Double DQN.
+- Schulman et al. (2015). *High-Dimensional Continuous Control Using Generalized Advantage Estimation*. GAE.
+- Schulman et al. (2017). *Proximal Policy Optimization Algorithms*. PPO.
+- Lillicrap et al. (2015). *Continuous control with deep reinforcement learning*. DDPG.
+
+### Books and Courses
+- Sutton & Barto. *Reinforcement Learning: An Introduction* (2nd ed.).
+- David Silver’s RL course (DeepMind).
 
 ---
 

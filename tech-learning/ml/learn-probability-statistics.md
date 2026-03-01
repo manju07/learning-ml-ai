@@ -15,6 +15,7 @@
 12. [Bayesian Inference](#bayesian-inference)
 13. [Applications in ML/DL](#applications-in-mldl)
 14. [Practical Examples](#practical-examples)
+15. [Common Pitfalls](#common-pitfalls-in-probability-and-statistics)
 
 ---
 
@@ -528,7 +529,13 @@ plt.show()
 
 ## Central Limit Theorem
 
-The CLT states that the sum of independent random variables approaches a normal distribution.
+The **Central Limit Theorem (CLT)** is one of the most important results in statistics. It states that the **sum** (or average) of independent, identically distributed random variables with finite mean and variance approaches a **normal distribution** as sample size \(n \to \infty\), regardless of the original distribution's shape. Formally:
+
+\[
+\frac{\bar{X}_n - \mu}{\sigma/\sqrt{n}} \xrightarrow{d} \mathcal{N}(0, 1)
+\]
+
+**Key conditions**: independence, finite variance. **Applications**: Justifies use of normal approximations for sample means, enables t-tests and confidence intervals, underpins many ML asymptotic results.
 
 ```python
 # Demonstrate CLT
@@ -598,6 +605,54 @@ print(f"P-value: {p_value:.4f}")
 print(f"Degrees of freedom: {dof}")
 ```
 
+### Hypothesis Testing Nuances
+
+**Type I vs Type II Errors**:
+- **Type I (α)**: Reject \(H_0\) when it's true (false positive)
+- **Type II (β)**: Fail to reject \(H_0\) when \(H_1\) is true (false negative)
+- **Power** = 1 − β: Probability of correctly rejecting \(H_0\) when \(H_1\) is true
+
+```python
+from scipy.stats import norm
+
+def power_analysis(n, effect_size, alpha=0.05):
+    """Compute approximate power for two-sample t-test."""
+    # Effect size d = (μ1 - μ2) / σ
+    # Power ≈ P(Z > z_α - √(n/2) * d)
+    z_alpha = norm.ppf(1 - alpha/2)
+    z_power = np.sqrt(n/2) * effect_size - z_alpha
+    return norm.cdf(z_power)
+
+# Sample size needed for 80% power with d=0.5
+for n in [50, 100, 200]:
+    print(f"n={n}: Power ≈ {power_analysis(n, 0.5):.2%}")
+```
+
+**Effect Size**: P-values indicate significance, not practical importance. Always report **effect size** (Cohen's d, η², etc.) alongside p-values.
+
+```python
+def cohens_d(group1, group2):
+    """Cohen's d: (mean1 - mean2) / pooled_std"""
+    n1, n2 = len(group1), len(group2)
+    var1, var2 = np.var(group1, ddof=1), np.var(group2, ddof=1)
+    pooled_std = np.sqrt(((n1-1)*var1 + (n2-1)*var2) / (n1+n2-2))
+    return (np.mean(group1) - np.mean(group2)) / pooled_std
+
+d = cohens_d(group1, group2)
+print(f"Effect size (Cohen's d): {d:.3f}")  # |d|>0.8 large, 0.5 medium, 0.2 small
+```
+
+**Multiple Comparisons**: Testing many hypotheses inflates family-wise error rate. Use **Bonferroni** (α/m) or **Benjamini-Hochberg (FDR)** for multiple testing.
+
+```python
+p_values = [0.01, 0.03, 0.04, 0.07, 0.15]  # Multiple tests
+rejected_bonferroni = [p < 0.05/len(p_values) for p in p_values]
+# Benjamini-Hochberg controls FDR
+from statsmodels.stats.multitest import multipletests
+_, p_adjusted, _, _ = multipletests(p_values, alpha=0.05, method='fdr_bh')
+print(f"FDR-adjusted p-values: {p_adjusted}")
+```
+
 ---
 
 ## Maximum Likelihood Estimation
@@ -646,6 +701,8 @@ plt.show()
 
 ## Bayesian Inference
 
+Bayesian inference treats parameters as **random variables** with distributions that we update as we observe data. Instead of point estimates (MLE), we obtain **full posterior distributions** \(P(\theta | \text{data})\), enabling uncertainty quantification and incorporation of prior knowledge.
+
 ### Prior, Likelihood, Posterior
 ```python
 # Bayesian parameter estimation
@@ -686,6 +743,30 @@ plt.show()
 posterior_mean = alpha_posterior / (alpha_posterior + beta_posterior)
 print(f"Posterior mean: {posterior_mean:.4f}")
 print(f"MLE estimate: {n_heads / (n_heads + n_tails):.4f}")
+```
+
+### Conjugate Priors and Posterior Predictives
+
+When prior and posterior belong to the same family, we have a **conjugate prior** (e.g., Beta for Binomial, Normal for Normal mean). This enables closed-form posteriors. The **posterior predictive** \(P(x_{\text{new}} | \text{data})\) averages over the posterior: \(\int P(x_{\text{new}} | \theta) P(\theta | \text{data}) d\theta\).
+
+### MCMC and Variational Inference
+
+For complex models, the posterior is intractable. **MCMC** (e.g., Metropolis-Hastings, Hamiltonian Monte Carlo) samples from the posterior. **Variational inference** approximates the posterior with a tractable distribution (e.g., Gaussian) by minimizing KL divergence.
+
+```python
+# PyMC3/PyMC example: Simple Bayesian regression
+# pip install pymc
+import pymc as pm
+
+# With PyMC: model definition and sampling
+# with pm.Model() as model:
+#     alpha = pm.Normal('alpha', mu=0, sigma=10)
+#     beta = pm.Normal('beta', mu=0, sigma=10)
+#     sigma = pm.HalfNormal('sigma', sigma=1)
+#     mu = alpha + beta * X
+#     y_obs = pm.Normal('y_obs', mu=mu, sigma=sigma, observed=y)
+#     trace = pm.sample(2000, return_inferencedata=True)
+# pm.summary(trace)  # Posterior summaries
 ```
 
 ---
@@ -861,6 +942,19 @@ print(f"True mean: 5.0")
 
 ---
 
+## Common Pitfalls in Probability and Statistics
+
+1. **P-value ≠ Effect size**: A tiny p-value can correspond to negligible effect. Always report effect size and practical significance.
+2. **Confusing P(H|D) with P(D|H)**: Base rate neglect in diagnostic testing (Bayes' theorem).
+3. **Multiple testing without correction**: Running many tests inflates false positives; use FDR or Bonferroni.
+4. **Assuming normality**: Check assumptions; use non-parametric tests (Mann-Whitney, Wilcoxon) when appropriate.
+5. **MLE bias for variance**: Use `ddof=1` for sample variance (unbiased); MLE uses `ddof=0`.
+6. **Correlation ≠ Causation**: Spurious correlations; Simpson's paradox in stratified data.
+7. **Small sample sizes**: CLT needs n ≳ 30 for decent approximation; use t-distribution for small n.
+8. **Ignoring prior in Bayesian**: Prior choice affects posterior; use sensitivity analysis.
+
+---
+
 ## Key Takeaways
 
 1. **Probability**: Foundation for understanding uncertainty
@@ -875,10 +969,16 @@ print(f"True mean: 5.0")
 
 ## Additional Resources
 
-- **Introduction to Probability (Blitzstein)**: Comprehensive textbook
-- **Pattern Recognition and Machine Learning (Bishop)**: ML perspective
-- **Bayesian Data Analysis (Gelman)**: Bayesian methods
-- **Statistical Rethinking (McElreath)**: Modern Bayesian approach
+### Books
+- **Introduction to Probability** (Blitzstein & Hwang): Comprehensive textbook with exercises
+- **Pattern Recognition and Machine Learning** (Bishop): ML perspective on probability
+- **Bayesian Data Analysis** (Gelman et al.): Bayesian methods and MCMC
+- **Statistical Rethinking** (McElreath): Modern Bayesian approach with code
+
+### References
+- Blitzstein & Hwang (2019): *Introduction to Probability*, 2nd ed. CRC Press
+- Gelman et al. (2013): *Bayesian Data Analysis*, 3rd ed. Chapman & Hall
+- Benjamini & Hochberg (1995): Controlling the False Discovery Rate, *J. Royal Stat. Soc. B*
 
 ---
 

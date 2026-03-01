@@ -11,12 +11,19 @@
 8. [Data Labeling and Annotation](#data-labeling-and-annotation)
 9. [Practical Examples](#practical-examples)
 10. [Best Practices](#best-practices)
+11. [Common Pitfalls and Troubleshooting](#common-pitfalls-and-troubleshooting)
+12. [Benchmarks and SOTA References](#benchmarks-and-sota-references)
+13. [Further Reading](#further-reading)
 
 ---
 
 ## Introduction to Data-Centric AI
 
 **Data-centric AI** shifts focus from model architecture to data quality. Same model + better data > better model + same data.
+
+### Intuition: Why Data Quality Matters More Than Architecture
+
+Andrew Ng's central thesis: once you have a reasonable architecture, **improving data** typically yields larger gains than tweaking the model. Noisy labels, distribution mismatch, and sparse coverage of edge cases limit even the best architectures. Data-centric approaches—cleaning, augmenting, synthetic generation, and selective labeling—target these bottlenecks directly.
 
 ### Model-Centric vs Data-Centric
 
@@ -74,17 +81,31 @@ X_resampled, y_resampled = smote.fit_resample(X_train, y_train)
 
 ### CTGAN (Conditional Tabular GAN)
 
+**Intuition**: CTGAN uses a GAN with a conditional generator—given a column value (e.g., class label), it generates coherent rows. Good for tables with mixed types (continuous, discrete, categorical). Use when you need high-fidelity, non-independent synthetic rows.
+
 ```python
 # pip install sdv
 from sdv.single_table import CTGANSynthesizer
 from sdv.metadata import SingleTableMetadata
 
+# 1. Infer schema (column types, constraints)
 metadata = SingleTableMetadata()
 metadata.detect_from_dataframe(real_data)
 
-synthesizer = CTGANSynthesizer(metadata, epochs=500)
+# 2. Train GAN-based synthesizer (encoder + generator + discriminator)
+synthesizer = CTGANSynthesizer(
+    metadata,
+    epochs=500,
+    verbose=True,
+    # cuda=True  # Use GPU if available
+)
 synthesizer.fit(real_data)
+
+# 3. Sample synthetic rows (preserves correlations)
 synthetic_data = synthesizer.sample(num_rows=10000)
+
+# 4. Optional: conditional sampling (e.g., oversample minority class)
+# synthetic_minority = synthesizer.sample(conditions={"target": 1}, num_rows=5000)
 ```
 
 ### Privacy-Preserving Generation
@@ -223,6 +244,18 @@ def mixup(images, labels, alpha=0.2):
     mixed_images = lam * images + (1 - lam) * images[indices]
     return mixed_images, labels, labels[indices], lam
 
+def rand_bbox(size, lam):
+    """Random bounding box for CutMix; lam controls area ratio."""
+    W, H = size[2], size[3]
+    cut_rat = np.sqrt(1.0 - lam)
+    cut_w, cut_h = int(W * cut_rat), int(H * cut_rat)
+    cx, cy = np.random.randint(W), np.random.randint(H)
+    bbx1 = np.clip(cx - cut_w // 2, 0, W)
+    bby1 = np.clip(cy - cut_h // 2, 0, H)
+    bbx2 = np.clip(cx + cut_w // 2, 0, W)
+    bby2 = np.clip(cy + cut_h // 2, 0, H)
+    return bbx1, bby1, bbx2, bby2
+
 def cutmix(images, labels, alpha=1.0):
     """CutMix: paste patch from one image onto another"""
     lam = np.random.beta(alpha, alpha)
@@ -235,15 +268,43 @@ def cutmix(images, labels, alpha=1.0):
 
 ### Diffusion-Based Image Generation
 
+**Intuition**: Diffusion models learn to denoise; sampling runs the reverse process. For augmentation, they generate novel images conditioned on class labels or text. Unlike GANs, diffusion avoids mode collapse and produces diverse, high-fidelity samples.
+
 ```python
 from diffusers import StableDiffusionPipeline
+import torch
+import os
 
-pipe = StableDiffusionPipeline.from_pretrained("runwayml/stable-diffusion-v1-5")
-# Generate training images
-for label in ["cat", "dog", "bird"]:
-    for i in range(100):
-        image = pipe(f"a photo of a {label}", num_inference_steps=30).images[0]
-        image.save(f"synthetic/{label}/{i}.png")
+pipe = StableDiffusionPipeline.from_pretrained("runwayml/stable-diffusion-v1-5", torch_dtype=torch.float16)
+pipe = pipe.to("cuda")
+
+# Generate training images with diversity via seeds and prompt variations
+def generate_synthetic_dataset(labels, n_per_class=100, prompt_templates=None):
+    """Generate class-balanced synthetic images with prompt diversity."""
+    if prompt_templates is None:
+        prompt_templates = ["a photo of a {}", "{} in natural lighting", "{} close-up"]
+    for label in labels:
+        os.makedirs(f"synthetic/{label}", exist_ok=True)
+        for i in range(n_per_class):
+            template = prompt_templates[i % len(prompt_templates)]
+            prompt = template.format(label)
+            # Vary seed for diversity
+            generator = torch.Generator(device="cuda").manual_seed(42 + i)
+            image = pipe(prompt, num_inference_steps=30, generator=generator).images[0]
+            image.save(f"synthetic/{label}/{i}.png")
+```
+
+### Diffusion-Based Augmentation (Img2Img)
+
+Use diffusion to *transform* existing images instead of generating from scratch—preserves identity while adding variation.
+
+```python
+from diffusers import StableDiffusionImg2ImgPipeline
+
+pipe = StableDiffusionImg2ImgPipeline.from_pretrained("runwayml/stable-diffusion-v1-5")
+# Strength 0.3–0.5: subtle variation; 0.7+: more creative changes
+def augment_with_diffusion(image, prompt="same style, slight variation", strength=0.4):
+    return pipe(prompt=prompt, image=image, strength=strength).images[0]
 ```
 
 ---
@@ -304,33 +365,81 @@ lsh = MinHashLSH(threshold=0.8, num_perm=128)
 
 ## Active Learning
 
-**Active learning**: Model selects the most informative unlabeled samples for human labeling.
+**Active learning**: Model selects the most informative unlabeled samples for human labeling. Goal: achieve target accuracy with fewer labels than random sampling.
 
-### Strategies
+### Intuition: When Does Active Learning Help?
 
-1. **Uncertainty sampling**: Label examples model is least confident about
-2. **Query-by-committee**: Multiple models disagree → label
-3. **Diversity sampling**: Select diverse examples (cluster-based)
+Active learning works best when (1) the model's uncertainty correlates with *true* informativeness, and (2) the unlabeled pool is **representative** of the target distribution. If the pool is biased or out-of-distribution, selecting by uncertainty can reinforce the bias. Use **diversity** (e.g., clustering) alongside uncertainty to avoid this.
+
+### Pool-Based vs Stream-Based
+
+| Mode | When to Use |
+|------|-------------|
+| **Pool-based** | Fixed unlabeled set; can score all before selecting |
+| **Stream-based** | Data arrives sequentially; must decide per example |
+| **Synthetic** | Use active learning to choose *which* synthetic samples to add |
+
+### Advanced Strategies
+
+1. **Uncertainty sampling**: Highest entropy, or lowest max-prob (least confident)
+2. **Margin sampling**: Smallest gap between top-2 class probabilities
+3. **Query-by-committee (QBC)**: Train K models; label where they disagree most
+4. **Expected model change**: Choose samples that would change the model most if labeled
+5. **Diversity + uncertainty**: Cluster embeddings; within each cluster, pick most uncertain (balances exploration vs exploitation)
 
 ### Implementation
 
 ```python
-def uncertainty_sampling(model, unlabeled_pool, n_samples=100):
-    """Select most uncertain samples for labeling"""
+import numpy as np
+
+def uncertainty_sampling(model, unlabeled_pool, n_samples=100, strategy="entropy"):
+    """
+    Select most uncertain samples for labeling.
+    strategy: 'entropy' | 'least_confident' | 'margin'
+    """
     probs = model.predict_proba(unlabeled_pool)
-    # Entropy as uncertainty
-    entropy = -np.sum(probs * np.log(probs + 1e-10), axis=1)
-    top_indices = np.argsort(entropy)[-n_samples:]
+    eps = 1e-10
+    
+    if strategy == "entropy":
+        entropy = -np.sum(probs * np.log(probs + eps), axis=1)
+        top_indices = np.argsort(entropy)[-n_samples:]
+    elif strategy == "least_confident":
+        max_probs = probs.max(axis=1)
+        top_indices = np.argsort(max_probs)[:n_samples]  # Lowest confidence
+    elif strategy == "margin":
+        sorted_probs = np.sort(probs, axis=1)[:, -2:]  # Top 2
+        margin = sorted_probs[:, 1] - sorted_probs[:, 0]
+        top_indices = np.argsort(margin)[:n_samples]  # Smallest margin
     return top_indices
 
+def diversity_aware_sampling(model, unlabeled_pool, embeddings, n_samples=100, n_clusters=20):
+    """Combine diversity (cluster) with uncertainty within clusters."""
+    from sklearn.cluster import KMeans
+    kmeans = KMeans(n_clusters=n_clusters, random_state=42).fit(embeddings)
+    probs = model.predict_proba(unlabeled_pool)
+    entropy = -np.sum(probs * np.log(probs + 1e-10), axis=1)
+    
+    selected = []
+    per_cluster = max(1, n_samples // n_clusters)
+    for c in range(n_clusters):
+        mask = kmeans.labels_ == c
+        indices = np.where(mask)[0]
+        if len(indices) == 0:
+            continue
+        top_local = np.argsort(entropy[mask])[-per_cluster:][::-1]
+        selected.extend(indices[top_local[:per_cluster]])
+    return np.array(selected[:n_samples])
+
 # Active learning loop
-labeled = initial_labeled_set()
+labeled_X, labeled_y = initial_labeled_set()
+unlabeled_pool = get_unlabeled_pool()
 for round in range(10):
-    model.fit(labeled.X, labeled.y)
-    indices = uncertainty_sampling(model, unlabeled_pool)
+    model.fit(labeled_X, labeled_y)
+    indices = uncertainty_sampling(model, unlabeled_pool, n_samples=50)
     new_labels = human_label(unlabeled_pool[indices])
-    labeled.add(unlabeled_pool[indices], new_labels)
-    unlabeled_pool.remove(indices)
+    labeled_X = np.vstack([labeled_X, unlabeled_pool[indices]])
+    labeled_y = np.concatenate([labeled_y, new_labels])
+    unlabeled_pool = np.delete(unlabeled_pool, indices, axis=0)
 ```
 
 ### LLM-Assisted Labeling

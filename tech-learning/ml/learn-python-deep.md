@@ -14,6 +14,7 @@
 11. [Design Patterns](#design-patterns)
 12. [Testing and Debugging](#testing-and-debugging)
 13. [Best Practices](#best-practices)
+14. [Common Pitfalls](#common-pitfalls-in-python)
 
 ---
 
@@ -687,7 +688,9 @@ with Pool(processes=4) as pool:
 print(results)
 ```
 
-### Async/Await
+### Async/Await and Asyncio
+
+`asyncio` provides an event loop for **cooperative concurrency**—ideal for I/O-bound tasks (network, disk, APIs) where threads would block. Use `async`/`await` for non-blocking I/O; CPU-bound work should use `multiprocessing`.
 
 ```python
 import asyncio
@@ -709,6 +712,47 @@ async def main():
 # Run async function
 results = asyncio.run(main())
 ```
+
+**Asyncio Patterns**:
+- **`asyncio.gather()`**: Run coroutines concurrently, collect results
+- **`asyncio.create_task()`**: Fire-and-forget; use for background tasks
+- **Semaphores**: Limit concurrent operations (e.g., max 10 parallel API calls)
+- **`asyncio.Queue`**: Producer-consumer pattern for async pipelines
+
+```python
+import asyncio
+
+async def limited_concurrent_fetches(urls, max_concurrent=5):
+    """Limit concurrent requests with semaphore."""
+    sem = asyncio.Semaphore(max_concurrent)
+    async def fetch_with_sem(url):
+        async with sem:
+            await asyncio.sleep(0.5)  # Simulate HTTP
+            return url
+    return await asyncio.gather(*[fetch_with_sem(u) for u in urls])
+
+# Producer-Consumer with asyncio.Queue
+async def producer(queue):
+    for i in range(5):
+        await queue.put(i)
+        await asyncio.sleep(0.1)
+    await queue.put(None)  # Sentinel
+
+async def consumer(queue):
+    while True:
+        item = await queue.get()
+        if item is None:
+            break
+        print(f"Processed {item}")
+    queue.task_done()
+
+async def main():
+    q = asyncio.Queue()
+    await asyncio.gather(producer(q), consumer(q))
+asyncio.run(main())
+```
+
+**`async with` and `async for`**: Use with async context managers (e.g., `aiohttp.ClientSession()`) and async iterators.
 
 ---
 
@@ -756,6 +800,8 @@ gc.enable()
 
 ### Profiling
 
+**cProfile** (stdlib): Low-overhead deterministic profiler; shows per-call cumulative and total time.
+
 ```python
 import cProfile
 import pstats
@@ -778,6 +824,30 @@ stats.sort_stats('cumulative')
 stats.print_stats(10)
 ```
 
+**line_profiler** (pip install line_profiler): Line-by-line timing. Decorate with `@profile` and run `kernprof -l -v script.py`:
+
+```python
+# @profile  # Uncomment for kernprof
+def fibonacci(n):
+    if n < 2:
+        return n
+    return fibonacci(n-1) + fibonacci(n-2)
+```
+
+**memory_profiler** (pip install memory_profiler): Line-by-line memory usage. Use `@profile` or `mprof run script.py`:
+
+```python
+from memory_profiler import profile
+
+@profile
+def allocate_large():
+    data = [0] * (10**6)  # ~8MB for ints
+    return sum(data)
+allocate_large()
+```
+
+**py-spy** (pip install py-spy): Sample profiler; attach to running process without code changes: `py-spy top -p <pid>`.
+
 ### Caching
 
 ```python
@@ -795,7 +865,9 @@ print(fibonacci(30))
 print(fibonacci(30))
 ```
 
-### Cython and Numba
+### Numba and Cython
+
+**Numba**: JIT-compiles NumPy/Python loops to machine code. Use `@jit(nopython=True)` for best performance.
 
 ```python
 # Numba JIT compilation
@@ -813,6 +885,46 @@ import numpy as np
 arr = np.arange(1000000)
 result = fast_sum(arr)
 ```
+
+### C Extensions
+
+When pure Python or Numba isn't enough, use C extensions for maximum speed.
+
+**1. Cython** (pip install cython): Write Python-like code with type annotations; compiles to C.
+
+```python
+# cython_module.pyx
+# cython: language_level=3
+def fast_loop(int n):
+    cdef int i
+    cdef long total = 0
+    for i in range(n):
+        total += i
+    return total
+```
+
+Build with `python setup.py build_ext --inplace` (setup.py uses `Extension` with `cythonize`).
+
+**2. ctypes**: Call C shared libraries from Python. No compilation of Python code—only for linking existing `.so`/`.dll`.
+
+```python
+import ctypes
+lib = ctypes.CDLL("./mylib.so")
+lib.my_c_function.argtypes = [ctypes.c_int]
+lib.my_c_function.restype = ctypes.c_long
+result = lib.my_c_function(1000)
+```
+
+**3. pybind11**: Expose C++ code to Python with minimal boilerplate. Preferred for C++ libraries.
+
+```cpp
+// example.cpp
+#include <pybind11/pybind11.h>
+int add(int a, int b) { return a + b; }
+PYBIND11_MODULE(example, m) { m.def("add", &add); }
+```
+
+**Guideline**: NumPy → Numba → Cython → C/C++ with pybind11, as complexity increases.
 
 ---
 
@@ -1017,6 +1129,19 @@ logger.critical("Critical message")
 
 ---
 
+## Common Pitfalls in Python
+
+1. **Mutable default arguments**: `def f(x=[])` shares one list across calls. Use `def f(x=None): x = x or []`.
+2. **Late-binding closures**: Loop variables in closures capture by reference. Use default args: `lambda i=i: print(i)`.
+3. **GIL and threading**: `threading` doesn't parallelize CPU-bound work; use `multiprocessing` or `concurrent.futures.ProcessPoolExecutor`.
+4. **Mixing asyncio with blocking calls**: Blocking I/O inside `async` defeats the event loop. Use `loop.run_in_executor()` for CPU-bound.
+5. **Forgetting `__init__.py`**: Packages need it (or use namespace packages). Python 3.3+ supports implicit namespace packages.
+6. **Shallow vs deep copy**: `list.copy()` and `copy.copy()` are shallow; nested structures need `copy.deepcopy()`.
+7. **Resource leaks**: Use context managers (`with`) for files, locks, connections. Implement `__exit__` properly.
+8. **Import side effects**: Avoid executing code at module level that has side effects; use `if __name__ == "__main__"`.
+
+---
+
 ## Resources
 
 - **Books**: 
@@ -1026,10 +1151,15 @@ logger.critical("Critical message")
 - **Documentation**: 
   - Python.org official docs
   - Real Python tutorials
+  - [PEP 484](https://peps.python.org/pep-0484/) (Type Hints), [PEP 525](https://peps.python.org/pep-0525/) (Async Generators)
 - **Practice**: 
   - LeetCode
   - HackerRank
   - Codewars
+- **References**: 
+  - asyncio: docs.python.org/3/library/asyncio.html
+  - Cython: cython.org
+  - pybind11: pybind11.readthedocs.io
 
 ---
 

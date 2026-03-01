@@ -378,6 +378,44 @@ class DiffusionTrainer:
 
 ---
 
+## Latent Diffusion Models
+
+**Why latent space?** Pixel-space diffusion (DDPM) is expensive: each forward/backward pass operates on 512×512×3 = 786K dimensions. *Latent diffusion* (Rombach et al., 2022) runs diffusion in a compressed latent space (e.g., 64×64×4 from a VAE), reducing compute by ~10× while preserving visual quality.
+
+**Pipeline:**
+1. **VAE Encoder**: Image \( x \to \) latent \( z \) (e.g., down 8× spatially).
+2. **Forward diffusion**: Add noise to \( z \) over \( T \) steps: \( z_t = \sqrt{\bar{\alpha}_t} z + \sqrt{1-\bar{\alpha}_t} \epsilon \).
+3. **U-Net denoiser**: Predicts \( \epsilon \) from \( (z_t, t, \text{text\_embedding}) \). The text conditioning comes from a frozen CLIP text encoder (or T5).
+4. **VAE Decoder**: Denoised latent \( \hat{z} \to \) image \( \hat{x} \).
+
+**Classifier-free guidance**: At inference, the model is called with \( \epsilon_\theta(z_t, t, c) \) and also \( \epsilon_\theta(z_t, t, \emptyset) \) for unconditional. The final prediction is:
+\[
+\hat{\epsilon} = \epsilon_\theta(z_t, t, c) + w \cdot (\epsilon_\theta(z_t, t, c) - \epsilon_\theta(z_t, t, \emptyset))
+\]
+\( w \) (guidance scale) controls how strongly the model follows the prompt; too high causes oversaturation.
+
+```python
+# Latent diffusion forward process (noising)
+def forward_diffusion(latent, t, noise):
+    """Add noise to latent according to schedule alpha_bar."""
+    alpha_bar_t = get_alpha_bar(t)  # From cosine or linear schedule
+    noisy_latent = torch.sqrt(alpha_bar_t) * latent + torch.sqrt(1 - alpha_bar_t) * noise
+    return noisy_latent
+
+# Sampling loop (simplified)
+def sample_latent_diffusion(model, shape, text_emb, num_steps=50, guidance_scale=7.5):
+    z = torch.randn(shape, device=device)
+    for t in reversed(range(num_steps)):
+        t_tensor = torch.full((shape[0],), t, device=device, dtype=torch.long)
+        eps_cond = model(z, t_tensor, text_emb)
+        eps_uncond = model(z, t_tensor, null_embedding)
+        eps = eps_uncond + guidance_scale * (eps_cond - eps_uncond)
+        z = denoise_step(z, eps, t)
+    return z  # Decode with VAE to get image
+```
+
+---
+
 ## Stable Diffusion
 
 ### Using Stable Diffusion
@@ -650,9 +688,13 @@ pipe.unet = get_peft_model(pipe.unet, lora_config)
 # Train on custom data - only ~1% of params updated
 ```
 
-### ControlNet
+### ControlNet: Spatial Control for Diffusion
 
-**ControlNet** adds spatial control to diffusion models (e.g., edges, depth, poses).
+**ControlNet** (Zhang et al., 2023) adds spatial control to diffusion models without retraining the base model. A trainable copy of the U-Net encoder is created, with its input tied to a *control signal* (Canny edges, depth, pose, etc.). The control branch's features are added to the main U-Net via zero-initialized convolution layers, so training starts with the original behavior preserved.
+
+**Architecture**: Control signal \( c \) → Control encoder → features added to each U-Net block via `+ zero_conv(control_features)`. Multiple ControlNets can be stacked (e.g., Canny + Depth) for multi-condition generation.
+
+**Common control types**: Canny (edges), Depth (Midas), OpenPose (skeleton), Lineart, Scribble, Segmentation.
 
 ```python
 from diffusers import StableDiffusionControlNetPipeline, ControlNetModel
@@ -667,6 +709,19 @@ pipe = StableDiffusionControlNetPipeline.from_pretrained(
 image = load_image("input.png")
 control_image = canny_detector(image)  # Edge map
 output = pipe("a beautiful landscape", image=control_image).images[0]
+```
+
+```python
+# ControlNet with depth conditioning
+from diffusers import StableDiffusionControlNetPipeline, ControlNetModel
+from diffusers.utils import load_image
+
+depth_controlnet = ControlNetModel.from_pretrained("lllyasviel/control_v11f1p_sd15_depth")
+pipe = StableDiffusionControlNetPipeline.from_pretrained(
+    "runwayml/stable-diffusion-v1-5", controlnet=depth_controlnet
+)
+# depth_image: precomputed depth map (grayscale, same size as output)
+output = pipe("futuristic cityscape", image=depth_image, num_inference_steps=25).images[0]
 ```
 
 ### Quantization for Diffusion Models
@@ -700,6 +755,38 @@ result = pipe(prompt="a dog", image=image, mask_image=mask).images[0]
 
 ---
 
+## Pitfalls and Common Mistakes
+
+1. **Mode Collapse (GANs)**
+   - **Problem**: Generator produces limited variety; discriminator "wins" too easily.
+   - **Fix**: Spectral normalization, WGAN-GP, progressive growing, or switch to diffusion.
+
+2. **GAN Training Instability**
+   - **Problem**: Training diverges; loss spikes; discriminator accuracy 100%.
+   - **Fix**: Balance G/D updates (often train D more), label smoothing, avoid learning rate that's too high.
+
+3. **Diffusion: Slow Inference**
+   - **Problem**: 50+ steps makes generation slow.
+   - **Fix**: Few-step samplers (DDIM, DPM-Solver), distillation (e.g., consistency models), or latent diffusion.
+
+4. **Poor Prompt Following**
+   - **Problem**: Generated images don't match text (wrong object, wrong style).
+   - **Fix**: Better prompts, higher guidance scale (with care for saturation), or fine-tune on domain data.
+
+5. **Artifacts and Over-saturation**
+   - **Problem**: Guidance scale too high causes oversaturated colors, deformed faces.
+   - **Fix**: Lower guidance (7–9 typical), use negative prompts ("oversaturated, deformed").
+
+6. **VAE Decoder Artifacts**
+   - **Problem**: Blurry or blocky regions from VAE.
+   - **Fix**: Use improved VAE (e.g., Stability's vae-ft-mse), or avoid aggressive downsampling.
+
+7. **Copyright and Safety**
+   - **Problem**: Models may reproduce copyrighted or harmful content.
+   - **Fix**: Use licensed models; employ content filters; avoid training on problematic data.
+
+---
+
 ## Best Practices
 
 1. **Start with Pre-trained Models**: Use Stable Diffusion, GPT, etc.
@@ -712,17 +799,19 @@ result = pipe(prompt="a dog", image=image, mask_image=mask).images[0]
 
 ---
 
-## Resources
+## Resources and References
 
-- **Papers**: 
-  - GAN (2014)
-  - VAE (2013)
-  - Diffusion Models (2020)
-  - Stable Diffusion (2022)
-- **Libraries**: 
-  - diffusers (Hugging Face)
-  - TensorFlow/PyTorch
-  - GAN libraries
+### Foundational Papers
+- Goodfellow et al. (2014). *Generative Adversarial Nets*. GAN.
+- Kingma & Welling (2013). *Auto-Encoding Variational Bayes*. VAE.
+- Ho et al. (2020). *Denoising Diffusion Probabilistic Models*. DDPM.
+- Rombach et al. (2022). *High-Resolution Image Synthesis with Latent Diffusion Models*. Stable Diffusion.
+- Zhang et al. (2023). *Adding Conditional Control to Text-to-Image Diffusion Models*. ControlNet.
+- Hu et al. (2021). *LoRA: Low-Rank Adaptation of Large Language Models*.
+
+### Libraries
+- **diffusers** (Hugging Face): Diffusion pipelines, LoRA, ControlNet
+- **TensorFlow / PyTorch**: GANs, VAEs, custom training
 
 ---
 

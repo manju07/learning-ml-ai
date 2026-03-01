@@ -128,17 +128,26 @@ def graph_statistics(edge_index, num_nodes):
 
 ## Message Passing Paradigm
 
-The core of GNNs: **aggregate** neighbor information and **update** node representations.
+The core of GNNs: **aggregate** neighbor information and **update** node representations. This generalizes convolution to irregular structures—instead of fixed receptive fields, each node's receptive field is its neighborhood.
 
 ### Message Passing Equation
 
 At layer k, for each node v:
 
-1. **Message**: m_uv = MESSAGE(h_u^(k-1), h_v^(k-1), e_uv)
-2. **Aggregate**: m_v = AGGREGATE({m_uv : u ∈ N(v)})
-3. **Update**: h_v^(k) = UPDATE(h_v^(k-1), m_v)
+1. **Message**: m_uv = MESSAGE(h_u^(k-1), h_v^(k-1), e_uv) — create message from each neighbor
+2. **Aggregate**: m_v = AGGREGATE({m_uv : u ∈ N(v)}) — combine messages (sum, mean, max)
+3. **Update**: h_v^(k) = UPDATE(h_v^(k-1), m_v) — combine node's own state with aggregated messages
 
-Where h_u = node embedding, e_uv = edge features, N(v) = neighbors of v.
+Where h_u = node embedding, e_uv = edge features, N(v) = neighbors of v. After K layers, a node's representation captures K-hop neighborhood structure.
+
+### Aggregation Schemes
+
+| Aggregator | Formula | Properties |
+|------------|---------|------------|
+| **Sum** | Σ m_uv | Distinguishes multiset cardinality; used in GIN |
+| **Mean** | (1/\|N(v)\|) Σ m_uv | Degree-invariant; used in GCN |
+| **Max** | max(m_uv) | Robust to outliers; used in GraphSAGE (Pool) |
+| **Attention** | Σ α_uv · m_uv | Learns importance; used in GAT |
 
 ```python
 import torch
@@ -256,13 +265,24 @@ class GCNWithNorm(nn.Module):
 
 ## Graph Attention Networks (GAT)
 
-GAT (Veličković et al., 2018) uses **attention** to learn importance of each neighbor.
+GAT (Veličković et al., 2018) uses **attention** to learn importance of each neighbor. Unlike GCN's fixed degree-based normalization, GAT learns to assign different weights to different neighbors—critical for graphs where some connections matter more than others (e.g., influential vs passive users in social graphs).
 
 ### Attention Mechanism
 
-α_uv = softmax_v( LeakyReLU(a^T [W·h_u ‖ W·h_v]) )
+**Unnormalized attention**: e_uv = LeakyReLU(a^T [W·h_u ‖ W·h_v]) — score for edge (u,v)
 
-h_v' = σ( Σ_{u∈N(v)} α_uv · W · h_u )
+**Softmax over neighbors**: α_uv = exp(e_uv) / Σ_{k∈N(v)} exp(e_kv) — normalized weights
+
+**Output**: h_v' = σ( Σ_{u∈N(v)} α_uv · W · h_u )
+
+The shared attention vector **a** learns which aspects of the concatenated features matter. LeakyReLU (negative slope ~0.2) allows gradient flow for non-attended nodes.
+
+### Multi-Head Attention
+
+GAT uses multiple attention heads (like Transformers) and concatenates (or averages) their outputs:
+
+- **Concat** (intermediate layers): h_v' = ‖_{k=1}^K σ( Σ_u α_uv^k · W^k · h_u ) — captures different relation aspects
+- **Average** (output layer): h_v' = σ( (1/K) Σ_k Σ_u α_uv^k · W^k · h_u ) — stabilizes final representation
 
 ```python
 from torch_geometric.nn import GATConv
@@ -601,7 +621,41 @@ class GINLayer(nn.Module):
 For billion-scale graphs:
 - **GraphSAINT**: Sample subgraphs, train on them
 - **Cluster-GCN**: Partition graph, train on clusters
-- ** scalable-GNN**: Approximate aggregation
+- **Scalable GNN**: Approximate aggregation
+
+---
+
+## Pitfalls and Gotchas
+
+### 1. Over-Smoothing
+
+**Symptom**: Deep GNNs produce nearly identical embeddings; accuracy drops after 2–4 layers.
+
+**Cause**: Repeated aggregation averages neighbor info; nodes in same community become indistinguishable.
+
+**Solutions**: Residual connections, jumping knowledge, PairNorm, early stopping (often 2–3 layers suffice).
+
+### 2. Under-Smoothing and Scalability
+
+- **Under-smoothing**: Shallow GNNs underfit—add layers or increase sample size
+- **Large graphs**: Full-batch GCN fails for 10M+ nodes; use NeighborLoader, GraphSAINT, Cluster-GCN
+
+### 3. Expressiveness Limits
+
+- Standard GCN/GAT are at most 1-WL expressive; use **GIN** when distinguishing non-isomorphic graphs matters
+
+---
+
+## Benchmarks and Datasets
+
+| Dataset | Task | Scale | Notes |
+|---------|------|-------|------|
+| Cora, CiteSeer, PubMed | Node classification | 2–20K nodes | Transductive baseline |
+| ogbn-arxiv, ogbn-products | Node classification | 169K–2.4M | OGB large-scale |
+| ZINC, MolHIV | Graph regression/classification | Small graphs | Molecular property |
+| Reddit, Amazon | Inductive | 200K+ | GraphSAGE benchmark |
+
+**Typical accuracies** (Cora): GCN ~81%, GAT ~83%. Use OGB for standardized evaluation.
 
 ---
 
@@ -628,3 +682,14 @@ For billion-scale graphs:
 | HGT | Heterogeneous graphs | Type-specific attention |
 
 **Installation**: `pip install torch-geometric torch-scatter torch-sparse`
+
+---
+
+## References
+
+- **Kipf & Welling** (2017): *Semi-Supervised Classification with Graph Convolutional Networks* — GCN
+- **Veličković et al.** (2018): *Graph Attention Networks* — GAT
+- **Hamilton et al.** (2017): *Inductive Representation Learning on Large Graphs* — GraphSAGE
+- **Xu et al.** (2019): *How Powerful are Graph Neural Networks?* — GIN, WL expressiveness
+- **Hu et al.** (2020): *Open Graph Benchmark* — OGB datasets and leaderboards
+- **PyTorch Geometric**: [Documentation](https://pytorch-geometric.readthedocs.io/)

@@ -4,15 +4,19 @@
 1. [Introduction to Federated Learning](#introduction-to-federated-learning)
 2. [Core Concepts](#core-concepts)
 3. [Federated Averaging (FedAvg)](#federated-averaging-fedavg)
-4. [Privacy and Security](#privacy-and-security)
-5. [Differential Privacy](#differential-privacy)
-6. [Secure Aggregation](#secure-aggregation)
-7. [Handling Non-IID Data](#handling-non-iid-data)
-8. [Communication Efficiency](#communication-efficiency)
-9. [Federated Learning Frameworks](#federated-learning-frameworks)
-10. [Practical Examples](#practical-examples)
-11. [Advanced Topics](#advanced-topics)
-12. [Best Practices](#best-practices)
+4. [FedProx and Alternatives](#fedprox-and-alternatives)
+5. [Privacy and Security](#privacy-and-security)
+6. [Differential Privacy](#differential-privacy)
+7. [Secure Aggregation](#secure-aggregation)
+8. [Handling Non-IID Data](#handling-non-iid-data)
+9. [Communication Efficiency](#communication-efficiency)
+10. [Federated Learning Frameworks](#federated-learning-frameworks)
+11. [Practical Examples](#practical-examples)
+12. [Advanced Topics](#advanced-topics)
+13. [Pitfalls and Challenges](#pitfalls-and-challenges)
+14. [Benchmarks and Datasets](#benchmarks-and-datasets)
+15. [Best Practices](#best-practices)
+16. [References](#references)
 
 ---
 
@@ -114,15 +118,21 @@ def stratified_client_selection(clients_by_type, samples_per_type=5):
 
 ## Federated Averaging (FedAvg)
 
-FedAvg (McMahan et al., 2017) is the foundational FL algorithm.
+FedAvg (McMahan et al., 2017) is the foundational FL algorithm. It is equivalent to **SGD on the average loss** when all clients participate with equal local steps—but in practice, **partial participation** and **multiple local epochs** make FedAvg behave differently from centralized SGD.
 
 ### Algorithm
 
 1. **Initialize**: Server has w_0
 2. **Each round t**:
-   - Server sends w_t to clients S_t
-   - Each client k ∈ S_t: w_{t+1}^k = w_t - η · ∇F_k(w_t) (local SGD)
-   - Server aggregates: w_{t+1} = Σ_k (n_k/n_t) · w_{t+1}^k
+   - Server sends w_t to subset of clients S_t (client sampling)
+   - Each client k ∈ S_t: performs E local SGD steps: w_{t+1}^k = w_t - η · Σ ∇F_k(w) (E epochs)
+   - Server aggregates: w_{t+1} = Σ_{k∈S_t} (n_k / n_t) · w_{t+1}^k (weighted by data size)
+
+### Key Design Choices
+
+- **Local epochs E**: More epochs → fewer rounds (communication-efficient) but risk of **client drift** (divergence from global optimum)
+- **Client sampling**: 10–30% per round is common; ensures diversity and reduces communication
+- **Learning rate**: Often lower than centralized (e.g., 0.01–0.1); may use server-side scheduling
 
 ### Implementation
 
@@ -190,14 +200,19 @@ def run_fedavg(server_model, client_dataloaders, num_rounds=100, lr=0.01):
 
 ### FedProx: Handling System Heterogeneity
 
-FedProx adds a proximal term to handle stragglers and varying client data:
+FedProx adds a **proximal term** to handle stragglers and varying client data (Li et al., 2020):
 
 **Objective**: min_w F_k(w) + (μ/2) ||w - w_t||²
 
-The proximal term penalizes updates that drift too far from the global model.
+The proximal term penalizes updates that drift too far from the global model, improving stability under:
+- **System heterogeneity**: Clients with different compute (some finish late)
+- **Statistical heterogeneity**: Non-IID data causes conflicting gradients
+- **Partial participation**: Different clients each round
+
+**When to use**: FedProx is recommended when FedAvg converges slowly or diverges; typical μ ∈ [0.001, 0.01].
 
 ```python
-def fedprox_loss(local_model, global_weights, batch, mu=0.01):
+def fedprox_loss(local_model, global_weights, batch_x, batch_y, mu=0.01):
     """FedProx loss with proximal term"""
     ce_loss = nn.functional.cross_entropy(local_model(batch_x), batch_y)
     prox_term = 0
@@ -207,7 +222,25 @@ def fedprox_loss(local_model, global_weights, batch, mu=0.01):
     ):
         prox_term += torch.sum((local_param - global_param) ** 2)
     return ce_loss + (mu / 2) * prox_term
+
+# In client training loop:
+for batch_x, batch_y in train_loader:
+    loss = fedprox_loss(local_model, server_model.state_dict(), batch_x, batch_y, mu=0.01)
+    loss.backward()
+    optimizer.step()
 ```
+
+---
+
+## FedProx and Alternatives
+
+| Algorithm | Key Idea | Use Case |
+|-----------|----------|----------|
+| **FedAvg** | Weighted average of client models | Baseline, IID-like data |
+| **FedProx** | Proximal term ||w - w_t||² | Non-IID, heterogeneous systems |
+| **FedNova** | Normalize by local steps | Variable local epochs |
+| **SCAFFOLD** | Control variates reduce variance | Strong non-IID |
+| **FedOpt** | Server-side optimizer (Adam, etc.) | Faster convergence |
 
 ---
 
@@ -232,13 +265,20 @@ def fedprox_loss(local_model, global_weights, batch, mu=0.01):
 
 ## Differential Privacy
 
-Differential Privacy (DP) provides **formal privacy guarantees**: output distribution changes little whether or not any single record is in the dataset.
+Differential Privacy (DP) provides **formal privacy guarantees**: the output distribution changes little whether or not any single record is in the dataset. In FL, we typically apply DP to **gradients** (clip + add noise) before aggregation.
 
 ### (ε, δ)-Differential Privacy
 
 A mechanism M is (ε, δ)-DP if for any adjacent datasets D, D' (differ by one record):
 
 P(M(D) ∈ S) ≤ e^ε · P(M(D') ∈ S) + δ
+
+- **ε** (epsilon): Privacy budget; lower = stronger. Common: ε ∈ [1, 10] for useful models
+- **δ** (delta): Probability of failure; typically δ < 1/n (n = dataset size)
+
+### RDP and Privacy Accounting
+
+**Rényi DP (RDP)** provides tighter composition: (ε, δ)-DP from RDP via conversion. Use **Opacus** or **TensorFlow Privacy** for proper accounting—naive composition oversteps ε.
 
 ### DP-SGD for Federated Learning
 
@@ -427,7 +467,7 @@ def topk_compress(gradients, k=0.01):
     return unflatten(mask, gradients)
 
 # 2. Quantization: Reduce precision (32-bit → 8-bit)
-def quantize_ gradients(gradients, num_bits=8):
+def quantize_gradients(gradients, num_bits=8):
     scale = 2 ** num_bits - 1
     return [torch.round(g * scale).to(torch.int8) / scale for g in gradients]
 ```
@@ -619,6 +659,73 @@ Clients update at different times. Server uses stale updates—weight by stalene
 
 ---
 
+## Pitfalls and Challenges
+
+### 1. Client Drift
+
+**Symptom**: Model diverges; accuracy fluctuates or degrades with rounds.
+
+**Causes**: Non-IID data, too many local epochs, high learning rate.
+
+**Solutions**: FedProx, SCAFFOLD, reduce local epochs, lower LR, or add client-side regularization.
+
+### 2. Communication Bottleneck
+
+FL is often **communication-bound**—sending full model (millions of params) each round dominates cost.
+
+**Solutions**: Gradient compression (top-k, quantization), increase local steps, reduce rounds.
+
+### 3. Poisoning and Byzantine Attacks
+
+Malicious clients can send arbitrary updates to corrupt the model.
+
+**Solutions**: Byzantine-robust aggregation (Krum, trimmed mean, median), anomaly detection on updates.
+
+### 4. Privacy-Accuracy Tradeoff
+
+Differential privacy adds noise—stronger privacy (low ε) hurts accuracy.
+
+**Guidance**: Start with ε = 10, decrease as needed; use proper privacy accounting (RDP).
+
+### 5. Evaluation Generalization
+
+Training accuracy can be misleading; validate on **held-out clients** and **centralized test set** if available.
+
+---
+
+## Benchmarks and Datasets
+
+### LEAF (LEAF Benchmark)
+
+```python
+# LEAF: Federated datasets for research
+# https://github.com/TalwalkarLab/leaf
+
+# FEMNIST: Federated Extended MNIST (by writer)
+# Shakespeare: Next-character prediction (by playwright)
+# Sentiment140: Twitter sentiment (by user)
+```
+
+| Dataset | Task | Clients | Non-IID | Notes |
+|---------|------|---------|---------|-------|
+| **FEMNIST** | Image classification | 3.5K | Yes (by writer) | Common FL benchmark |
+| **Shakespeare** | Next-char prediction | ~1K | Yes | Language modeling |
+| **Sentiment140** | Sentiment | 660K | Yes | Sparse participation |
+| **CIFAR-100** (synthetic) | Image classification | 100 | Configurable | Dirichlet α for non-IID |
+
+### FedML Benchmarks
+
+- **FedML**: Standardized FL benchmarks (FedAvg, FedProx, etc.)
+- **Cross-silo**: Few clients (hospitals, banks); full participation
+- **Cross-device**: Many clients (phones); partial participation
+
+### Typical Results
+
+- **FEMNIST (FedAvg)**: ~85% test accuracy, 100+ rounds
+- **Non-IID (α=0.1)**: 5–15% accuracy drop vs IID; FedProx/SCAFFOLD help
+
+---
+
 ## Best Practices
 
 1. **Start with FedAvg** before trying FedProx/SCAFFOLD
@@ -641,3 +748,14 @@ Clients update at different times. Server uses stale updates—weight by stalene
 | Frameworks | Flower, TFF, PySyft |
 
 **When to use FL**: Data cannot leave source (privacy, regulation, logistics).
+
+---
+
+## References
+
+- **McMahan et al.** (2017): *Communication-Efficient Learning of Deep Networks from Decentralized Data* — FedAvg
+- **Li et al.** (2020): *Federated Optimization in Heterogeneous Networks* — FedProx
+- **Abadi et al.** (2016): *Deep Learning with Differential Privacy* — DP-SGD
+- **Caldas et al.** (2018): *LEAF: A Benchmark for Federated Settings* — FEMNIST, Shakespeare
+- **Flower**: [flower.dev](https://flower.dev/) — Federated learning framework
+- **TensorFlow Federated**: [TFF Documentation](https://www.tensorflow.org/federated)

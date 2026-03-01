@@ -17,6 +17,9 @@
 14. [Streaming](#streaming)
 15. [Practical Examples](#practical-examples)
 16. [Best Practices](#best-practices)
+17. [Common Pitfalls](#common-pitfalls)
+18. [Production Considerations](#production-considerations)
+19. [References](#references)
 
 ---
 
@@ -728,6 +731,20 @@ agent = Agent(name="Claude Agent", model=model)
 
 ## Multi-Agent Patterns
 
+### Conceptual Overview: Handoffs vs Agents-as-Tools
+
+| Dimension | **Handoffs** | **Agents as Tools** |
+|-----------|--------------|---------------------|
+| **Control** | New agent takes over the *entire* conversation | Calling agent retains control and sees tool output |
+| **Use case** | Customer routing (billing → refund → specialist) | Orchestration (manager delegates research, then synthesizes) |
+| **Context** | Full conversation history flows to the new agent | Only the sub-agent's output flows back |
+| **Flow** | One-way; caller doesn't return unless handoff back | Multi-step; caller can invoke multiple times |
+| **Example** | Triage → billing for payment questions | Manager uses researcher tool, then writer tool |
+
+**When to use handoffs:** User intent changes (e.g., "actually I need a refund") or domain shifts where a specialist should own the session.
+
+**When to use agents-as-tools:** You need a coordinator to gather inputs from specialists and produce a synthesized result (research → write report).
+
 ### Pattern 1: Handoffs (Decentralized)
 
 Agents hand off the conversation to specialists:
@@ -1097,3 +1114,16 @@ except Exception as e:
 **Install**: `pip install openai-agents`  
 **Docs**: https://openai.github.io/openai-agents-python/  
 **GitHub**: https://github.com/openai/openai-agents-python
+
+---
+
+## References
+
+| Resource | Description |
+|----------|-------------|
+| [OpenAI Agents SDK Docs](https://openai.github.io/openai-agents-python/) | Official documentation |
+| [OpenAI Agents GitHub](https://github.com/openai/openai-agents-python) | Source code, examples, issues |
+| [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) | Standard for tool integration |
+| [OpenAI Traces](https://platform.openai.com/traces) | Observability dashboard |
+| ReAct (Yao et al., 2022) | Reasoning + Acting paradigm |
+| Swarm (Legacy) | Experimental predecessor to agents SDK |

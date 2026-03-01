@@ -10,12 +10,28 @@
 7. [Mixture of Experts (MoE)](#mixture-of-experts-moe)
 8. [Practical Examples](#practical-examples)
 9. [Best Practices](#best-practices)
+10. [Common Pitfalls and Troubleshooting](#common-pitfalls-and-troubleshooting)
+11. [Benchmarks and SOTA References](#benchmarks-and-sota-references)
+12. [Further Reading](#further-reading)
 
 ---
 
 ## Introduction to State Space Models
 
 **State Space Models (SSMs)** are sequence models that map input sequences to output sequences through a latent state. They offer an alternative to Transformers with **linear** complexity in sequence length instead of quadratic.
+
+### Intuition: What Problem Do SSMs Solve?
+
+Transformers excel at many tasks but suffer from **quadratic attention** cost: doubling sequence length quadruples compute. SSMs draw from control theory—they model sequences as dynamical systems where a compact **hidden state** evolves over time. The state acts as a *compressed memory*: instead of attending to every past token, the model maintains a fixed-size summary that gets updated incrementally. Think of it as an RNN that can be trained in parallel (via convolution) and doesn't suffer from vanishing gradients.
+
+### When to Use SSMs vs Transformers
+
+| Use SSMs when… | Use Transformers when… |
+|----------------|------------------------|
+| Sequence length > 16K (DNA, audio, long documents) | Need precise retrieval (e.g., "attend to token 42") |
+| Inference latency matters (constant state vs growing KV cache) | Short sequences, attention overhead is acceptable |
+| Edge or resource-constrained deployment | Ecosystem maturity and pretrained availability matter |
+| Domain: genomics, speech, time series, long-context QA | Domain: standard NLP, retrieval-heavy tasks |
 
 ### Why SSMs?
 
@@ -46,16 +62,30 @@ Convert continuous to discrete for digital processing:
 
 Where Ā = exp(ΔA), B̄ = (ΔA)^{-1}(exp(ΔA) - I)·ΔB. Δ = step size.
 
+**Intuition**: Discretization converts the continuous ODE into a recurrence. Zero-order hold (ZOH) assumes inputs are constant between sampling steps—a standard choice in control theory. The bilinear method is an alternative that can improve stability for stiff systems.
+
 ```python
 import torch
 import torch.nn as nn
 import numpy as np
 
 def discretize_zoh(A, B, delta):
-    """Zero-order hold discretization"""
+    """
+    Zero-order hold (ZOH) discretization.
+    Assumes input x(t) is constant between steps.
+    For diagonal A: Ā = exp(Δ·A), B̄ = (Ā - 1)/A · B (element-wise).
+    """
     I = torch.eye(A.shape[0], device=A.device)
     dA = torch.exp(delta * A)  # Simplified for diagonal A
+    # For diagonal A: (A)^{-1}(exp(ΔA) - I) simplifies to (dA - 1) / A
     dB = (dA - I) @ torch.inverse(A) @ B if A.det() != 0 else delta * B
+    return dA, dB
+
+def discretize_bilinear(A, B, delta):
+    """Bilinear (Tustin) discretization—often more stable for stiff A."""
+    I = torch.eye(A.shape[0], device=A.device)
+    dA = (I + delta/2 * A) @ torch.inverse(I - delta/2 * A)
+    dB = torch.sqrt(torch.tensor(delta)) * torch.inverse(I - delta/2 * A) @ B
     return dA, dB
 ```
 
@@ -68,9 +98,16 @@ def discretize_zoh(A, B, delta):
 - **Diagonal approximation**: Efficient computation
 - **Convolutional mode**: Parallel training via convolution
 
+### Advanced: S4 Theory and S4D Variants
+
+S4 uses **structured** matrices (e.g., diagonal + low-rank) that allow:
+1. **Analytic kernel computation**—no need to materialize A^k explicitly; use generating functions
+2. **FFT-based convolution**—O(L log L) instead of O(L²) for sequence length L
+3. **S4D** (Diagonal S4): Restrict A to diagonal with complex eigenvalues; simplifies implementation and often matches full S4 performance
+
 ### HiPPO Matrix
 
-Initializes A to optimally approximate recent history:
+**HiPPO** (High-order Polynomial Projection Operators) initializes A so the state h optimally approximates the *recent history* of the input under a least-squares measure. Intuition: the hidden state is a compact representation of "what happened recently," and HiPPO makes that representation theoretically optimal.
 
 ```python
 def make_hippo(N):
@@ -108,10 +145,11 @@ def compute_ssm_kernel(A, B, C, L):
 
 ### S4D (Diagonal)
 
-When A is diagonal, everything simplifies:
+When A is diagonal, eigenvalues are on the diagonal; powers A^k are trivial. Complex eigenvalues allow oscillation (damped sinusoids), useful for periodic signals.
 
 ```python
 class S4DLayer(nn.Module):
+    """S4D: Diagonal S4. FFT gives O(L log L) training; recurrence gives O(1) inference per step."""
     def __init__(self, d_model, d_state=64, dropout=0.0):
         super().__init__()
         self.d_model = d_model
@@ -146,11 +184,17 @@ class S4DLayer(nn.Module):
 
 In S4, A, B, C are fixed (time-invariant). In Mamba, B, C, Δ are functions of x:
 
-- B_t = Linear(x_t)
-- C_t = Linear(x_t)
-- Δ_t = softplus(Linear(x_t))
+- B_t = Linear(x_t)  — *what* to write into the state
+- C_t = Linear(x_t)  — *what* to read out
+- Δ_t = softplus(Linear(x_t))  — *how fast* to evolve (content-adaptive step size)
 
-This makes the model content-aware—it can decide what to remember based on the input.
+**Intuition**: Language is highly selective. Not every token deserves equal "memory." A model reading "The capital of France is Paris" should remember "Paris" more than "the." Mamba lets the model learn this—Δ small means "hold state longer"; Δ large means "flush and move on." This is analogous to a gated mechanism (like LSTM) but with continuous, input-dependent gating.
+
+### When Selectivity Matters
+
+- **Language modeling**: Recall vs forget (names, numbers vs filler words)
+- **Long documents**: Different sections need different retention
+- **In-context learning**: Selectively store few-shot examples
 
 ### Mamba Block
 

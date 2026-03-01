@@ -5,12 +5,16 @@
 2. [MLOps Lifecycle](#mlops-lifecycle)
 3. [Version Control](#version-control)
 4. [CI/CD for ML](#cicd-for-ml)
-5. [Model Monitoring](#model-monitoring)
-6. [Model Deployment](#model-deployment)
-7. [Infrastructure as Code](#infrastructure-as-code)
-8. [Experiment Tracking](#experiment-tracking)
-9. [Model Registry](#model-registry)
-10. [Best Practices](#best-practices)
+5. [Feature Stores](#feature-stores)
+6. [Model Registry](#model-registry)
+7. [Model Monitoring](#model-monitoring)
+8. [Model Deployment](#model-deployment)
+9. [Infrastructure as Code](#infrastructure-as-code)
+10. [Experiment Tracking](#experiment-tracking)
+11. [Pitfalls and Anti-Patterns](#pitfalls-and-anti-patterns)
+12. [Benchmarks and Maturity](#benchmarks-and-maturity)
+13. [Best Practices](#best-practices)
+14. [References](#references)
 
 ---
 
@@ -19,11 +23,18 @@
 MLOps (Machine Learning Operations) is the practice of deploying and maintaining ML models in production reliably and efficiently.
 
 ### Key Principles
-- **Automation**: Automate ML workflows
-- **Reproducibility**: Ensure reproducible experiments
-- **Monitoring**: Track model performance
-- **Scalability**: Handle production workloads
-- **Collaboration**: Enable team collaboration
+- **Automation**: Automate ML workflows (training, deployment, retraining)
+- **Reproducibility**: Ensure reproducible experiments (code, data, environment)
+- **Monitoring**: Track model performance and data quality over time
+- **Scalability**: Handle production workloads and multi-model deployments
+- **Collaboration**: Enable team collaboration across data scientists and engineers
+
+### Why MLOps Differs from Software
+
+Unlike traditional software, ML systems have **two feedback loops**: (1) data scientists iterating on models, and (2) production data influencing model behavior. Models **degrade** when:
+- **Data drift**: Input distribution changes (e.g., user behavior shifts)
+- **Concept drift**: Relationship between features and target changes (e.g., fraud patterns evolve)
+- **Upstream changes**: Feature pipelines or data sources change silently
 
 ### MLOps vs DevOps
 - **DevOps**: Software development and operations
@@ -154,6 +165,122 @@ with mlflow.start_run():
     mlflow.log_metric("accuracy", accuracy)
     mlflow.sklearn.log_model(model, "model")
 ```
+
+---
+
+## Feature Stores
+
+A **feature store** centralizes feature computation, storage, and serving for training and inference. It solves **training–serving skew**: features used offline often differ from those at inference due to different code paths, latency requirements, or data availability.
+
+### Offline vs Online Stores
+
+| Store | Use Case | Latency | Example |
+|-------|----------|---------|---------|
+| **Offline** | Training, batch inference | Minutes–hours | S3, BigQuery, Snowflake |
+| **Online** | Real-time inference | Milliseconds | Redis, DynamoDB, dedicated stores |
+
+### Feast (Open Source Feature Store)
+
+```python
+# pip install feast
+
+from feast import FeatureStore, Entity, FeatureView, Field
+from feast.types import Float32, Int64
+from datetime import timedelta
+
+# Define entity and feature view
+user = Entity(name="user_id", join_keys=["user_id"])
+
+user_features = FeatureView(
+    name="user_features",
+    entities=[user],
+    ttl=timedelta(days=1),
+    schema=[
+        Field(name="avg_purchase_amount", dtype=Float32),
+        Field(name="purchase_count_7d", dtype=Int64),
+    ],
+    source=...,  # Batch or stream source
+)
+
+# Training: get historical features
+store = FeatureStore(repo_path=".")
+training_df = store.get_historical_features(
+    entity_df=entity_df,  # DataFrame with user_id, event_timestamp
+    features=["user_features:avg_purchase_amount", "user_features:purchase_count_7d"]
+).to_df()
+
+# Inference: get online features
+online_features = store.get_online_features(
+    features=["user_features:avg_purchase_amount", "user_features:purchase_count_7d"],
+    entity_rows=[{"user_id": 12345}]
+).to_dict()
+```
+
+### Key Concepts
+
+- **Point-in-time correctness**: Features at training must reflect values available at prediction time (no future leakage).
+- **Feature versioning**: Track schema and computation logic; backfill when definitions change.
+- **Transform consistency**: Same transforms for training and serving (e.g., normalization, encoding).
+
+### Feature Store Tools
+
+| Tool | Type | Best For |
+|------|------|----------|
+| **Feast** | Open source | Flexibility, cloud-agnostic |
+| **Tecton** | Managed | Enterprise, real-time |
+| **Databricks Feature Store** | Managed | Databricks users |
+| **SageMaker Feature Store** | Managed | AWS ecosystem |
+
+---
+
+## Model Registry
+
+A **model registry** stores, versions, and manages model artifacts for deployment. It provides governance, lineage, and stage transitions (None → Staging → Production → Archived).
+
+### Registry Concepts
+
+- **Model name**: Logical grouping (e.g., `churn_predictor`)
+- **Version**: Immutable snapshot with metadata
+- **Stage**: Lifecycle state (Staging, Production, Archived)
+- **Aliases**: Human-readable tags (`champion`, `challenger`, `v2.1`)
+
+### MLflow Model Registry
+
+```python
+import mlflow
+from mlflow.tracking import MlflowClient
+
+# Register model from run
+run_id = "abc123"
+model_uri = f"runs:/{run_id}/model"
+mlflow.register_model(model_uri, "ChurnPredictor")
+
+# Transition to staging
+client = MlflowClient()
+client.transition_model_version_stage(
+    name="ChurnPredictor",
+    version=1,
+    stage="Staging"
+)
+
+# Add model signature (input/output schema)
+from mlflow.models import infer_signature
+signature = infer_signature(X_train, model.predict(X_train))
+mlflow.log_model(model, "model", signature=signature)
+
+# Load by alias
+model = mlflow.pyfunc.load_model(model_uri="models:/ChurnPredictor@champion")
+
+# Compare versions
+client.search_model_versions("name='ChurnPredictor'")
+```
+
+### Registry Best Practices
+
+- **Immutable versions**: Never overwrite; create new versions for retrains
+- **Metadata**: Log training config, metrics, data version, Git commit
+- **Approval workflow**: Require approval before promoting to Production
+- **Rollback**: Keep previous Production version available for quick rollback
 
 ---
 
@@ -374,28 +501,73 @@ wandb.log_model("model", model)
 
 ---
 
-## Model Registry
+## Pitfalls and Anti-Patterns
 
-### MLflow Model Registry
+### 1. Training–Serving Skew
+
+**Problem**: Features or preprocessing differ between training and inference.
 
 ```python
-# Register model
-model_uri = f"runs:/{run_id}/model"
-mlflow.register_model(model_uri, "MyModel")
+# BAD: Different code paths
+# Training: sklearn StandardScaler fit on train
+# Serving: forgot to apply scaler or used different fit
 
-# Transition to staging
-client = mlflow.tracking.MlflowClient()
-client.transition_model_version_stage(
-    name="MyModel",
-    version=1,
-    stage="Staging"
-)
-
-# Load model from registry
-model = mlflow.pyfunc.load_model(
-    model_uri=f"models:/MyModel/Staging"
-)
+# GOOD: Single source of truth (feature store, shared transform code)
+def get_features(user_id):
+    return feature_store.get_online_features(user_id)  # Same computation
 ```
+
+### 2. Data Leakage
+
+**Problem**: Future or holdout data leaks into training.
+
+- **Temporal leakage**: Using features from after prediction time
+- **Target leakage**: Including information derived from the target
+- **Cross-validation leakage**: Validation folds not properly separated
+
+### 3. Silent Failures
+
+**Problem**: Model or pipeline fails without alerting.
+
+- **Stale models**: No retraining when data drifts
+- **Broken pipelines**: Upstream feature jobs fail silently
+- **Wrong version**: Deployed model doesn't match registry
+
+### 4. Ignoring Model Degradation
+
+- Set **performance thresholds** and alert when exceeded
+- Schedule **periodic evaluation** on holdout data
+- Define **retraining triggers**: accuracy drop, data volume, time
+
+### 5. Over-Engineering Early
+
+- Start with simple pipelines; add complexity when needed
+- Prefer managed services (SageMaker, Vertex AI) for initial deployments
+
+---
+
+## Benchmarks and Maturity
+
+### MLOps Maturity Levels
+
+| Level | Characteristics |
+|-------|------------------|
+| **0** | Manual, ad-hoc scripts, no tracking |
+| **1** | Experiment tracking, manual deployment |
+| **2** | CI/CD, automated deployment, basic monitoring |
+| **3** | Feature store, automated retraining, full governance |
+| **4** | Auto-scaling, A/B tests, full automation |
+
+### Tool Comparison (Simplified)
+
+| Need | Options |
+|------|---------|
+| Experiment tracking | MLflow, Weights & Biases, Neptune |
+| Model registry | MLflow, SageMaker, Vertex Model Registry |
+| Feature store | Feast, Tecton, Databricks |
+| Orchestration | Airflow, Kubeflow, Prefect |
+| Deployment | SageMaker, Seldon, KServe, BentoML |
+| Monitoring | Evidently, WhyLabs, custom Prometheus |
 
 ---
 
@@ -424,15 +596,25 @@ model = mlflow.pyfunc.load_model(
 
 ---
 
+## References
+
+- **Google**: [Rules of Machine Learning](https://developers.google.com/machine-learning/guides/rules-of-ml) — Best practices for ML in production
+- **Sculley et al.** (2015): *Hidden Technical Debt in Machine Learning Systems* — Pitfalls in ML systems
+- **Feast**: [Feature Store Documentation](https://docs.feast.dev/) — Open source feature store
+- **MLflow**: [MLflow Docs](https://mlflow.org/docs/latest/index.html) — Experiment tracking and registry
+- **Databricks**: [MLOps on Databricks](https://www.databricks.com/glossary/mlops) — End-to-end MLOps guide
+
+---
+
 ## Conclusion
 
 MLOps ensures ML models are deployed and maintained effectively. Key takeaways:
 
-1. **Automate**: Automate ML workflows
-2. **Monitor**: Track model and data quality
-3. **Version**: Version code, data, and models
-4. **Test**: Test models before deployment
-5. **Document**: Document everything
+1. **Automate**: Automate ML workflows (train, deploy, retrain)
+2. **Monitor**: Track model performance, data drift, and pipeline health
+3. **Version**: Version code, data, models, and features
+4. **Test**: Test models, transforms, and pipelines before deployment
+5. **Avoid skew**: Use feature stores to keep training and serving consistent
 
 Remember: MLOps is about making ML production-ready and maintainable!
 

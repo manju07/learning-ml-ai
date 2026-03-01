@@ -2,62 +2,67 @@
 
 ## Table of Contents
 1. [Introduction to Advanced RL](#introduction-to-advanced-rl)
-2. [Soft Actor-Critic (SAC)](#soft-actor-critic-sac)
-3. [Twin Delayed DDPG (TD3)](#twin-delayed-ddpg-td3)
-4. [Model-Based RL](#model-based-rl)
-5. [Offline RL](#offline-rl)
-6. [MuZero and Learned World Models](#muzero-and-learned-world-models)
-7. [Intrinsic Motivation and Curiosity](#intrinsic-motivation-and-curiosity)
-8. [Multi-Agent RL](#multi-agent-rl)
-9. [Practical Examples](#practical-examples)
-10. [Best Practices](#best-practices)
+2. [Proximal Policy Optimization (PPO)](#proximal-policy-optimization-ppo)
+3. [Soft Actor-Critic (SAC)](#soft-actor-critic-sac)
+4. [Offline Reinforcement Learning](#offline-reinforcement-learning)
+5. [Practical Examples](#practical-examples)
+6. [Common Pitfalls and Troubleshooting](#common-pitfalls-and-troubleshooting)
+7. [Production Considerations](#production-considerations)
+8. [Best Practices](#best-practices)
+9. [References](#references)
 
 ---
 
 ## Introduction to Advanced RL
 
-This guide covers algorithms and concepts beyond DQN and PPO: **off-policy** methods (SAC, TD3), **model-based** RL, **offline** RL, and **planning** with learned models (MuZero).
+**Advanced reinforcement learning** extends foundational RL (Q-learning, policy gradients) with algorithms that achieve stronger sample efficiency, stability, and applicability to real-world settings. Key advances include **on-policy clipping** (PPO), **maximum-entropy** objectives (SAC), and **offline learning from fixed datasets** without environment interaction.
 
-### Algorithm Comparison
+### When to Use Which Algorithm
 
-| Algorithm | Policy | Action Space | Sample Efficiency | Stability |
-|-----------|--------|--------------|-------------------|-----------|
-| **PPO** | On-policy | Continuous | Low | High |
-| **DDPG** | Off-policy | Continuous | Medium | Low |
-| **TD3** | Off-policy | Continuous | Medium | Medium |
-| **SAC** | Off-policy | Continuous | High | High |
-| **CQL** | Off-policy | Both | Offline | Medium |
+| Algorithm | Setting | Strengths | Typical Use |
+|-----------|---------|-----------|-------------|
+| **PPO** | Online, continuous/discrete | Stable, easy to tune | Robotics, games, general RL |
+| **SAC** | Online, continuous | Sample efficient, robust | Robotics, continuous control |
+| **Offline RL** | Batch data only | No sim required | Historical logs, healthcare |
+| **DQN** | Online, discrete | Mature, well-studied | Atari, discrete control |
+
+### Conceptual Foundations
+
+- **On-policy vs off-policy**: On-policy (PPO) uses data from current policy; off-policy (SAC, DQN) reuses past experience, improving sample efficiency.
+- **Actor-critic**: Actor (policy) selects actions; critic (value function) estimates returns, reducing variance in policy gradients.
+- **Entropy regularization**: Encourages exploration; SAC maximizes entropy explicitly for robustness.
 
 ---
 
-## Soft Actor-Critic (SAC)
+## Proximal Policy Optimization (PPO)
 
-**SAC** (Haarnoja et al., 2018) is an off-policy actor-critic that maximizes **entropy** alongside reward, enabling exploration and robustness.
+**PPO** (Schulman et al., 2017) is an on-policy algorithm that limits policy updates to prevent destructive changes. It clips the probability ratio to keep updates stable.
 
-### Key Ideas
+### Core Idea
 
-- **Maximum entropy RL**: J = E[Σ r + α·H(π)]
-- **Stochastic policy**: Sample actions for exploration
-- **Automatic temperature**: Learns α (entropy coefficient)
-- **Off-policy**: Reuse experience from replay buffer
+The policy gradient can have high variance; large updates can collapse performance. PPO constrains the **policy ratio** \( r_t(\theta) = \frac{\pi_\theta(a_t|s_t)}{\pi_{\theta_{old}}(a_t|s_t)} \) so updates stay within a trust region.
 
-### SAC Components
+### PPO-Clip Objective
 
-1. **Actor** (π): Outputs mean and log_std for Gaussian policy
-2. **Critic** (Q): Two Q-networks (reduce overestimation)
-3. **Target Q**: Soft update for stability
+\[
+L^{CLIP} = \mathbb{E}_t \left[ \min\left( r_t(\theta) \hat{A}_t, \text{clip}(r_t(\theta), 1-\epsilon, 1+\epsilon) \hat{A}_t \right) \right]
+\]
 
-### Policy Update (Reparameterization)
+- \(\hat{A}_t\): Advantage estimate (GAE)
+- \(\epsilon\): Clip range (typically 0.2)
+- If advantage positive: don't increase probability beyond \(1+\epsilon\)
+- If advantage negative: don't decrease beyond \(1-\epsilon\)
 
-a = tanh(μ + σ·ε), ε ~ N(0,1)
+### Full PPO Loss
 
-log π(a|s) = log π(μ,σ) - Σ log(1 - tanh²(u_i))  (correction for tanh)
+\[
+L = L^{CLIP} - c_1 L^{VF} + c_2 S[\pi_\theta]
+\]
 
-### Losses
+- \(L^{VF}\): Value function loss (MSE)
+- \(S[\pi_\theta]\): Entropy bonus (exploration)
 
-- **Critic**: TD loss with min of two Qs
-- **Actor**: E[α·log π(a|s) - Q(s,a)]
-- **Alpha**: -E[log π(a|s)] - target_entropy
+### Implementation with Comments
 
 ```python
 import torch
@@ -65,410 +70,479 @@ import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
 
-class SquashedGaussianPolicy(nn.Module):
-    def __init__(self, obs_dim, act_dim, hidden_dim=256, log_std_min=-20, log_std_max=2):
+class ActorCritic(nn.Module):
+    """Shared backbone with separate policy and value heads."""
+    def __init__(self, obs_dim, act_dim, hidden_dim=64):
         super().__init__()
-        self.log_std_min = log_std_min
-        self.log_std_max = log_std_max
+        self.shared = nn.Sequential(
+            nn.Linear(obs_dim, hidden_dim),
+            nn.Tanh(),
+            nn.Linear(hidden_dim, hidden_dim),
+            nn.Tanh(),
+        )
+        self.actor_mean = nn.Linear(hidden_dim, act_dim)
+        self.actor_logstd = nn.Parameter(torch.zeros(1, act_dim))
+        self.critic = nn.Linear(hidden_dim, 1)
+
+    def forward(self, obs):
+        shared = self.shared(obs)
+        # Gaussian policy for continuous actions
+        mean = self.actor_mean(shared)
+        std = torch.exp(self.actor_logstd).expand_as(mean)
+        return mean, std, self.critic(shared).squeeze(-1)
+
+    def get_action_and_log_prob(self, obs, deterministic=False):
+        mean, std, _ = self.forward(obs)
+        dist = torch.distributions.Normal(mean, std)
+        if deterministic:
+            action = mean
+        else:
+            action = dist.sample()
+        log_prob = dist.log_prob(action).sum(dim=-1)
+        return action, log_prob
+
+    def evaluate_actions(self, obs, actions):
+        mean, std, value = self.forward(obs)
+        dist = torch.distributions.Normal(mean, std)
+        log_prob = dist.log_prob(actions).sum(dim=-1)
+        entropy = dist.entropy().sum(dim=-1)
+        return log_prob, entropy, value
+
+
+def compute_gae(rewards, values, dones, next_value, gamma=0.99, lam=0.95):
+    """
+    Generalized Advantage Estimation.
+    Balances bias (short horizon) and variance (long horizon).
+    """
+    advantages = torch.zeros_like(rewards)
+    gae = 0
+    for t in reversed(range(len(rewards))):
+        if t == len(rewards) - 1:
+            next_val = next_value
+        else:
+            next_val = values[t + 1]
+        delta = rewards[t] + gamma * next_val * (1 - dones[t]) - values[t]
+        gae = delta + gamma * lam * gae * (1 - dones[t])
+        advantages[t] = gae
+    returns = advantages + values
+    return advantages, returns
+
+
+def ppo_update(model, optimizer, obs, actions, old_log_probs, advantages, returns, clip_eps=0.2, value_coef=0.5, entropy_coef=0.01):
+    """
+    Single PPO update epoch. Typically run multiple epochs per batch.
+    """
+    log_prob, entropy, value = model.evaluate_actions(obs, actions)
+    ratio = torch.exp(log_prob - old_log_probs)
+
+    # Clipped surrogate
+    adv = (advantages - advantages.mean()) / (advantages.std() + 1e-8)
+    surr1 = ratio * adv
+    surr2 = torch.clamp(ratio, 1 - clip_eps, 1 + clip_eps) * adv
+    actor_loss = -torch.min(surr1, surr2).mean()
+
+    critic_loss = F.mse_loss(value, returns)
+    entropy_loss = -entropy.mean()
+
+    loss = actor_loss + value_coef * critic_loss - entropy_coef * entropy_loss
+    optimizer.zero_grad()
+    loss.backward()
+    nn.utils.clip_grad_norm_(model.parameters(), 0.5)
+    optimizer.step()
+    return loss.item()
+```
+
+### PPO Hyperparameters
+
+| Parameter | Typical Value | Notes |
+|-----------|---------------|-------|
+| Clip \(\epsilon\) | 0.2 | Smaller = more conservative |
+| GAE \(\lambda\) | 0.95 | Higher = more bias, less variance |
+| Epochs per batch | 3–10 | More epochs risk overfitting to batch |
+| Batch size | 64–4096 | Larger = more stable, slower |
+
+---
+
+## Soft Actor-Critic (SAC)
+
+**SAC** (Haarnoja et al., 2018) is an off-policy, maximum-entropy algorithm for continuous control. It learns a policy that maximizes expected return **and** entropy (exploration).
+
+### Core Idea
+
+Maximum-entropy RL augments the reward: \( r + \alpha \mathcal{H}(\pi(\cdot|s)) \). Higher entropy encourages diverse behavior and robustness. SAC uses:
+- **Actor**: Stochastic policy (reparameterization trick)
+- **Critic**: Two Q-networks + target networks (reduce overestimation)
+- **Auto \(\alpha\)**: Learn temperature to balance return vs entropy
+
+### SAC Objective
+
+- **Critic**: Minimize TD error for \(Q(s,a)\)
+- **Actor**: Maximize \(Q(s,\pi(s)) - \alpha \log \pi(a|s)\)
+- **Alpha**: Updated to maintain target entropy
+
+### Implementation with Comments
+
+```python
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+import copy
+
+class SquashedGaussianPolicy(nn.Module):
+    """Tanh-squashed Gaussian policy for bounded actions."""
+    def __init__(self, obs_dim, act_dim, hidden_dim=256):
+        super().__init__()
         self.net = nn.Sequential(
             nn.Linear(obs_dim, hidden_dim),
             nn.ReLU(),
             nn.Linear(hidden_dim, hidden_dim),
-            nn.ReLU()
+            nn.ReLU(),
         )
         self.mean = nn.Linear(hidden_dim, act_dim)
         self.log_std = nn.Linear(hidden_dim, act_dim)
-    
+
     def forward(self, obs, deterministic=False):
         h = self.net(obs)
         mean = self.mean(h)
-        if deterministic:
-            return torch.tanh(mean)
-        log_std = self.log_std(h).clamp(self.log_std_min, self.log_std_max)
+        log_std = self.log_std(h).clamp(-20, 2)
         std = log_std.exp()
-        normal = torch.distributions.Normal(mean, std)
-        x_t = normal.rsample()
-        action = torch.tanh(x_t)
-        log_prob = (normal.log_prob(x_t) - torch.log(1 - action.pow(2) + 1e-6)).sum(dim=-1)
-        return action, log_prob
+        dist = torch.distributions.Normal(mean, std)
+        if deterministic:
+            action = mean
+        else:
+            action = dist.rsample()  # Reparameterization
+        # Tanh squashing
+        tanh_action = torch.tanh(action)
+        log_prob = (dist.log_prob(action).sum(dim=-1) -
+                    torch.log(1 - tanh_action.pow(2) + 1e-6).sum(dim=-1))
+        return tanh_action, log_prob
 
-class Critic(nn.Module):
+
+class QNetwork(nn.Module):
     def __init__(self, obs_dim, act_dim, hidden_dim=256):
         super().__init__()
-        self.q1 = nn.Sequential(
+        self.net = nn.Sequential(
             nn.Linear(obs_dim + act_dim, hidden_dim),
             nn.ReLU(),
             nn.Linear(hidden_dim, hidden_dim),
             nn.ReLU(),
-            nn.Linear(hidden_dim, 1)
+            nn.Linear(hidden_dim, 1),
         )
-        self.q2 = nn.Sequential(
-            nn.Linear(obs_dim + act_dim, hidden_dim),
-            nn.ReLU(),
-            nn.Linear(hidden_dim, hidden_dim),
-            nn.ReLU(),
-            nn.Linear(hidden_dim, 1)
+
+    def forward(self, obs, action):
+        return self.net(torch.cat([obs, action], dim=-1)).squeeze(-1)
+
+
+class SAC:
+    def __init__(self, obs_dim, act_dim, lr=3e-4, gamma=0.99, tau=0.005, alpha=0.2, auto_alpha=True, target_entropy=None):
+        self.actor = SquashedGaussianPolicy(obs_dim, act_dim)
+        self.critic1 = QNetwork(obs_dim, act_dim)
+        self.critic2 = QNetwork(obs_dim, act_dim)
+        self.critic1_tgt = copy.deepcopy(self.critic1)
+        self.critic2_tgt = copy.deepcopy(self.critic2)
+
+        self.actor_opt = torch.optim.Adam(self.actor.parameters(), lr=lr)
+        self.critic_opt = torch.optim.Adam(
+            list(self.critic1.parameters()) + list(self.critic2.parameters()), lr=lr
         )
-    
-    def forward(self, obs, act):
-        x = torch.cat([obs, act], dim=-1)
-        return self.q1(x), self.q2(x)
 
-def sac_update(actor, critic, target_critic, alpha, replay_buffer, gamma=0.99, tau=0.005):
-    obs, act, rew, next_obs, done = replay_buffer.sample(256)
-    
-    # Critic loss
-    with torch.no_grad():
-        next_act, next_log_prob = actor(next_obs)
-        next_q1, next_q2 = target_critic(next_obs, next_act)
-        next_q = torch.min(next_q1, next_q2) - alpha * next_log_prob.unsqueeze(-1)
-        target_q = rew.unsqueeze(-1) + gamma * (1 - done.unsqueeze(-1)) * next_q
-    
-    q1, q2 = critic(obs, act)
-    critic_loss = F.mse_loss(q1, target_q) + F.mse_loss(q2, target_q)
-    
-    # Actor loss
-    new_act, log_prob = actor(obs)
-    q1, q2 = critic(obs, new_act)
-    q = torch.min(q1, q2)
-    actor_loss = (alpha * log_prob - q).mean()
-    
-    # Alpha (optional: fix alpha = 0.2)
-    # alpha_loss = -log_alpha * (log_prob + target_entropy).detach().mean()
-    
-    return critic_loss, actor_loss
-```
+        self.gamma = gamma
+        self.tau = tau
+        self.auto_alpha = auto_alpha
+        target_entropy = target_entropy or -act_dim  # Heuristic: -dim(A)
+        self.log_alpha = torch.zeros(1, requires_grad=True)
+        self.alpha_opt = torch.optim.Adam([self.log_alpha], lr=lr)
+        self.target_entropy = target_entropy
 
-### Using Stable-Baselines3
-
-```python
-from stable_baselines3 import SAC
-from stable_baselines3.common.env_util import make_vec_env
-
-env = make_vec_env("HalfCheetah-v4", n_envs=4)
-model = SAC(
-    "MlpPolicy",
-    env,
-    learning_rate=3e-4,
-    buffer_size=1_000_000,
-    learning_starts=1000,
-    batch_size=256,
-    tau=0.005,
-    gamma=0.99,
-    ent_coef="auto"  # Automatic entropy tuning
-)
-model.learn(total_timesteps=1_000_000)
-```
-
----
-
-## Twin Delayed DDPG (TD3)
-
-**TD3** (Fujimoto et al., 2018) improves DDPG with:
-1. **Twin Q-networks**: Use min of two Qs (reduce overestimation)
-2. **Delayed policy updates**: Update actor less frequently
-3. **Target policy smoothing**: Add noise to target actions
-
-```python
-# TD3 pseudocode
-# 1. Critic: target_q = r + γ * min_i Q'_i(s', a' + ε), ε ~ clip(N(0,σ), -c, c)
-# 2. Update critics with TD loss
-# 3. Every d steps: update actor to maximize Q(s, π(s))
-```
-
-```python
-from stable_baselines3 import TD3
-
-model = TD3(
-    "MlpPolicy",
-    env,
-    learning_rate=1e-3,
-    buffer_size=1_000_000,
-    learning_starts=1000,
-    batch_size=256,
-    tau=0.005,
-    policy_delay=2,  # Update actor every 2 critic updates
-    target_policy_noise=0.2,
-    target_noise_clip=0.5
-)
-model.learn(total_timesteps=1_000_000)
-```
-
----
-
-## Model-Based RL
-
-**Model-based RL** learns a **world model** (dynamics) and uses it for planning or training.
-
-### Dynamics Model
-
-Predict next state and reward: (s', r) = f(s, a)
-
-### Categories
-
-1. **Model-based planning**: Plan with learned model (e.g., MCTS)
-2. **Model-based policy learning**: Generate synthetic experience
-3. **World models**: Learn in latent space (e.g., Dreamer)
-
-### Simple World Model
-
-```python
-class WorldModel(nn.Module):
-    def __init__(self, obs_dim, act_dim, hidden_dim=256):
-        super().__init__()
-        self.forward_net = nn.Sequential(
-            nn.Linear(obs_dim + act_dim, hidden_dim),
-            nn.ReLU(),
-            nn.Linear(hidden_dim, hidden_dim),
-            nn.ReLU(),
-            nn.Linear(hidden_dim, obs_dim + 1)  # next_obs + reward
-        )
-    
-    def forward(self, obs, act):
-        x = torch.cat([obs, act], dim=-1)
-        out = self.forward_net(x)
-        next_obs, reward = out[:, :-1], out[:, -1:]
-        return next_obs, reward
-
-# Train on replay buffer
-# Use for planning: rollout trajectories, optimize actions
-```
-
-### MBPO (Model-Based Policy Optimization)
-
-1. Collect data with random/SAC policy
-2. Train dynamics model
-3. Generate short rollouts from model
-4. Train policy on model-generated data
-5. Periodically add real data
-
----
-
-## Offline RL
-
-**Offline RL** learns from a fixed dataset **without** environment interaction. Critical for healthcare, robotics (safe), recommendations.
-
-### Challenges
-
-- **Distribution shift**: Policy may visit OOD states
-- **Extrapolation error**: Q-values overestimated for unseen actions
-- **No exploration**: Cannot improve data collection
-
-### Conservative Q-Learning (CQL)
-
-CQL penalizes Q-values for actions **outside** the dataset:
-
-L_CQL = E[log Σ_a exp(Q(s,a)) - E_a~π_β [Q(s,a)]]
-
-Minimize Q for non-data actions → conservative estimates.
-
-```python
-# CQL loss (simplified)
-def cql_loss(q_values, dataset_actions, alpha=1.0):
-    # log-sum-exp over all actions (or sampled)
-    log_sum_exp_q = torch.logsumexp(q_values, dim=1)
-    dataset_q = q_values.gather(1, dataset_actions).squeeze()
-    return alpha * (log_sum_exp_q - dataset_q).mean()
-```
-
-### IQL (Implicit Q-Learning)
-
-- No explicit maximization over actions
-- Use expectile regression for V and Q
-- Extract policy via advantage-weighted regression
-
-### Practical Offline RL
-
-```python
-# d4rl datasets: pip install d4rl
-import d4rl
-import gym
-
-env = gym.make("halfcheetah-medium-v2")
-dataset = env.get_dataset()  # obs, actions, rewards, next_obs, dones
-
-# Use CQL, IQL, or BC from offline data
-```
-
----
-
-## MuZero and Learned World Models
-
-**MuZero** (DeepMind) learns:
-1. **Representation**: h = f(s)
-2. **Dynamics**: h' = g(h, a)
-3. **Prediction**: (p, v) = p(h) — policy and value
-
-No explicit model of environment; model is **implicit** in latent space.
-
-### MuZero for Planning
-
-1. Encode state: h = f(s)
-2. For each step: h = g(h, a), (p, v) = p(h)
-3. MCTS in latent space using p, v, g
-4. Select action, execute in env
-5. Train on (s, a, r, ..., G) with consistency losses
-
-### Simplified MuZero Style
-
-```python
-class MuZeroNet(nn.Module):
-    def __init__(self, obs_dim, act_dim, hidden_dim=128):
-        super().__init__()
-        self.representation = nn.Sequential(nn.Linear(obs_dim, hidden_dim), nn.ReLU())
-        self.dynamics = nn.Sequential(
-            nn.Linear(hidden_dim + act_dim, hidden_dim),
-            nn.ReLU()
-        )
-        self.prediction = nn.Sequential(
-            nn.Linear(hidden_dim, hidden_dim),
-            nn.ReLU(),
-            nn.Linear(hidden_dim, act_dim)  # policy logits
-        )
-        self.value_head = nn.Linear(hidden_dim, 1)
-        self.reward_head = nn.Linear(hidden_dim, 1)
-```
-
----
-
-## Intrinsic Motivation and Curiosity
-
-### Curiosity-Driven Exploration
-
-**Curiosity**: Reward = r_extrinsic + β * r_intrinsic
-
-**Intrinsic reward**: Prediction error (ICM) or random network distillation (RND).
-
-### RND (Random Network Distillation)
-
-- **Target network**: Random, fixed
-- **Predictor**: Predict target’s output
-- **Intrinsic reward**: Prediction error (higher in novel states)
-
-```python
-class RND(nn.Module):
-    def __init__(self, obs_dim, embed_dim=128):
-        super().__init__()
-        self.target = nn.Sequential(
-            nn.Linear(obs_dim, 128),
-            nn.ReLU(),
-            nn.Linear(128, embed_dim)
-        )
-        self.predictor = nn.Sequential(
-            nn.Linear(obs_dim, 128),
-            nn.ReLU(),
-            nn.Linear(128, embed_dim)
-        )
-        for p in self.target.parameters():
-            p.requires_grad = False
-    
-    def intrinsic_reward(self, obs):
+    def select_action(self, obs, deterministic=False):
         with torch.no_grad():
-            target_feat = self.target(obs)
-        pred_feat = self.predictor(obs)
-        return F.mse_loss(pred_feat, target_feat, reduction='none').mean(-1)
+            a, _ = self.actor(obs.unsqueeze(0), deterministic=deterministic)
+            return a.squeeze(0)
+
+    def update(self, batch):
+        obs, actions, rewards, next_obs, dones = batch
+        # Update critics
+        with torch.no_grad():
+            next_actions, next_log_prob = self.actor(next_obs)
+            q1_next = self.critic1_tgt(next_obs, next_actions)
+            q2_next = self.critic2_tgt(next_obs, next_actions)
+            min_q_next = torch.min(q1_next, q2_next)
+            alpha = self.log_alpha.exp()
+            target_q = rewards + self.gamma * (1 - dones) * (min_q_next - alpha * next_log_prob)
+        q1 = self.critic1(obs, actions)
+        q2 = self.critic2(obs, actions)
+        critic_loss = F.mse_loss(q1, target_q) + F.mse_loss(q2, target_q)
+        self.critic_opt.zero_grad()
+        critic_loss.backward()
+        self.critic_opt.step()
+
+        # Update actor
+        new_actions, log_prob = self.actor(obs)
+        q1 = self.critic1(obs, new_actions)
+        q2 = self.critic2(obs, new_actions)
+        min_q = torch.min(q1, q2)
+        actor_loss = (self.log_alpha.exp() * log_prob - min_q).mean()
+        self.actor_opt.zero_grad()
+        actor_loss.backward()
+        self.actor_opt.step()
+
+        # Update alpha (optional)
+        if self.auto_alpha:
+            alpha_loss = -(self.log_alpha * (log_prob + self.target_entropy).detach()).mean()
+            self.alpha_opt.zero_grad()
+            alpha_loss.backward()
+            self.alpha_opt.step()
+
+        # Soft update targets
+        for p, pt in zip(self.critic1.parameters(), self.critic1_tgt.parameters()):
+            pt.data.copy_(self.tau * p + (1 - self.tau) * pt)
+        for p, pt in zip(self.critic2.parameters(), self.critic2_tgt.parameters()):
+            pt.data.copy_(self.tau * p + (1 - self.tau) * pt)
 ```
 
 ---
 
-## Multi-Agent RL
+## Offline Reinforcement Learning
 
-### Types
+**Offline RL** learns from a fixed dataset of transitions \((s, a, r, s')\) **without** interacting with the environment. Critical when:
+- Real-world interaction is costly or dangerous (robotics, healthcare)
+- Data comes from historical logs (recommendations, ad bidding)
 
-- **Cooperative**: Shared reward
-- **Competitive**: Zero-sum
-- **Mixed**: General-sum
+### Key Challenge: Distribution Shift
 
-### MADDPG
+The behavior policy \(\beta\) that collected the data may differ from the learned policy \(\pi\). Evaluating or executing \(\pi\) on out-of-distribution actions can lead to **extrapolation error**: Q-values for unseen \((s,a)\) are overestimated.
 
-Centralized training, decentralized execution. Each agent has access to all observations during training.
+### Approaches
 
-### Independent PPO (IPPO)
+| Method | Idea | Typical Use |
+|--------|------|-------------|
+| **Conservative Q-Learning (CQL)** | Penalize Q-values for OOD actions | General offline RL |
+| **Implicit Q-Learning (IQL)** | Avoid explicit max over actions | Stable, simple |
+| **Batch-Constrained Q-learning (BCQ)** | Constrain policy close to behavior | Narrow data |
+| **TD3+BC** | Add behavior cloning term to TD3 | Simple baseline |
 
-Each agent runs PPO independently, treating others as part of the environment.
+### CQL: Conceptual Overview
+
+CQL minimizes Q-values on **sampled** actions (from replay) and maximizes on **dataset** actions. The learning objective includes:
+\[
+\min_Q \alpha \cdot \left( \mathbb{E}_{s \sim D}[\log \sum_a \exp(Q(s,a))] - \mathbb{E}_{(s,a) \sim D}[Q(s,a)] \right) + \text{TD loss}
+\]
+
+This keeps Q-values **conservative** for actions not well represented in the dataset.
+
+### Simple Offline RL: BC + TD3 (TD3+BC)
 
 ```python
-# Simple multi-agent loop
-obs_n = env.reset()
-while not done:
-    act_n = [agent[i].select_action(obs_n[i]) for i in range(n_agents)]
-    next_obs_n, rew_n, done_n, _ = env.step(act_n)
-    for i in range(n_agents):
-        agent[i].store_transition(obs_n[i], act_n[i], rew_n[i], next_obs_n[i], done_n[i])
-    obs_n = next_obs_n
+def td3_bc_loss(actor, critic, critic_tgt, batch, alpha=2.5):
+    """
+    TD3+BC: Combine TD3 critic loss with behavior cloning regularization.
+    alpha controls how much to trust the dataset policy.
+    """
+    obs, actions, rewards, next_obs, dones = batch
+
+    # TD target
+    with torch.no_grad():
+        next_actions = actor(next_obs)  # Deterministic
+        target_q = critic_tgt(next_obs, next_actions)
+        target_q = rewards + 0.99 * (1 - dones) * target_q
+
+    current_q = critic(obs, actions)
+    td_loss = F.mse_loss(current_q, target_q)
+
+    # Behavior cloning: actor should mimic dataset actions
+    pred_actions = actor(obs)
+    bc_loss = F.mse_loss(pred_actions, actions)
+
+    # Combined: scale BC by 1/mean(|Q|) to balance
+    scale = current_q.abs().mean().detach()
+    actor_loss = -critic(obs, pred_actions).mean() + alpha * bc_loss / scale
+
+    return td_loss, actor_loss
 ```
+
+### Practical Offline RL Tips
+
+1. **Data quality matters**: Noisy or biased data yields biased policies.
+2. **Stay close to behavior**: Avoid large policy shifts.
+3. **Evaluate carefully**: Use logged data for OPE (Off-Policy Evaluation) when possible.
+4. **Avoid extrapolation**: Prefer methods that constrain the policy (BCQ, CQL).
 
 ---
 
 ## Practical Examples
 
-### Example 1: SAC on Custom Environment
+### Example 1: PPO with Gymnasium (Continuous Control)
 
 ```python
-import gym
-from stable_baselines3 import SAC
-from stable_baselines3.common.callbacks import EvalCallback
+import gymnasium as gym
+import torch
 
+def collect_trajectories(env, model, steps_per_epoch=2048):
+    """Collect rollout for PPO update."""
+    obs, _ = env.reset()
+    obs_buf, act_buf, rew_buf, logp_buf, val_buf, done_buf = [], [], [], [], [], []
+
+    for _ in range(steps_per_epoch):
+        with torch.no_grad():
+            act, logp = model.get_action_and_log_prob(torch.FloatTensor(obs).unsqueeze(0))
+            _, _, val = model.evaluate_actions(
+                torch.FloatTensor(obs).unsqueeze(0), act
+            )
+        act = act.squeeze(0).numpy()
+        next_obs, rew, term, trunc, _ = env.step(act)
+        done = term or trunc
+
+        obs_buf.append(obs)
+        act_buf.append(act)
+        rew_buf.append(rew)
+        logp_buf.append(logp.item())
+        val_buf.append(val.item())
+        done_buf.append(done)
+        obs = next_obs
+        if done:
+            obs, _ = env.reset()
+
+    return (
+        torch.FloatTensor(np.array(obs_buf)),
+        torch.FloatTensor(np.array(act_buf)),
+        torch.FloatTensor(rew_buf),
+        torch.FloatTensor(logp_buf),
+        torch.FloatTensor(val_buf),
+        torch.FloatTensor(done_buf),
+    )
+
+# Training loop
 env = gym.make("Pendulum-v1")
-eval_env = gym.make("Pendulum-v1")
-
-model = SAC("MlpPolicy", env, verbose=1)
-eval_callback = EvalCallback(eval_env, best_model_save_path="./sac_pendulum", eval_freq=5000)
-model.learn(total_timesteps=100_000, callback=eval_callback)
+model = ActorCritic(obs_dim=3, act_dim=1)
+optimizer = torch.optim.Adam(model.parameters(), lr=3e-4)
+for epoch in range(500):
+    obs, actions, rewards, old_log_probs, values, dones = collect_trajectories(env, model)
+    next_value = model(torch.FloatTensor(obs[-1]).unsqueeze(0))[2].item()
+    advantages, returns = compute_gae(rewards, values, dones, next_value)
+    for _ in range(5):
+        ppo_update(model, optimizer, obs, actions, old_log_probs, advantages, returns)
 ```
 
-### Example 2: Offline RL with d4rl
+### Example 2: SAC with Replay Buffer
 
 ```python
-import d4rl
-import gym
-from stable_baselines3 import CQL
+from collections import deque
+import random
 
-env = gym.make("halfcheetah-medium-v2")
-# CQL needs offline dataset - use custom replay buffer from d4rl
-model = CQL("MlpPolicy", env, verbose=1)
-# Load dataset into buffer, train
+class ReplayBuffer:
+    def __init__(self, capacity=1e6):
+        self.buffer = deque(maxlen=int(capacity))
+
+    def push(self, obs, action, reward, next_obs, done):
+        self.buffer.append((obs, action, reward, next_obs, done))
+
+    def sample(self, batch_size):
+        batch = random.sample(self.buffer, batch_size)
+        obs, actions, rewards, next_obs, dones = zip(*batch)
+        return (
+            torch.FloatTensor(np.array(obs)),
+            torch.FloatTensor(np.array(actions)),
+            torch.FloatTensor(rewards),
+            torch.FloatTensor(np.array(next_obs)),
+            torch.FloatTensor(dones),
+        )
+
+    def __len__(self):
+        return len(self.buffer)
+
+# SAC training
+sac = SAC(obs_dim=3, act_dim=1)
+replay = ReplayBuffer(capacity=100000)
+obs, _ = env.reset()
+for step in range(100000):
+    action = sac.select_action(torch.FloatTensor(obs), deterministic=False).numpy()
+    next_obs, reward, term, trunc, _ = env.step(action)
+    replay.push(obs, action, reward, next_obs, term or trunc)
+    obs = next_obs
+    if term or trunc:
+        obs, _ = env.reset()
+
+    if len(replay) > 1000:
+        batch = replay.sample(256)
+        sac.update(batch)
 ```
 
-### Example 3: Curiosity with PPO
+---
 
-```python
-# Wrap env with curiosity reward
-class CuriosityWrapper(gym.Wrapper):
-    def __init__(self, env, rnd, scale=0.01):
-        super().__init__(env)
-        self.rnd = rnd
-        self.scale = scale
-    
-    def step(self, action):
-        obs, rew, done, info = self.env.step(action)
-        intr = self.rnd.intrinsic_reward(obs)
-        rew = rew + self.scale * intr
-        return obs, rew, done, info
-```
+## Common Pitfalls and Troubleshooting
+
+### 1. PPO: Collapsing / NaNs
+
+**Symptom**: Policy collapses (repeated actions) or NaNs in loss.
+
+**Causes**: Learning rate too high; advantage scale explosion; bad initialization.
+
+**Solutions**:
+- Normalize advantages: `(A - mean) / (std + 1e-8)`
+- Clip gradients: `nn.utils.clip_grad_norm_(model.parameters(), 0.5)`
+- Lower LR (e.g., 3e-4)
+- Check for division by zero in log_prob
+
+### 2. SAC: Actor Outputs Saturate at ±1
+
+**Symptom**: Tanh outputs always -1 or +1.
+
+**Causes**: Alpha too high; Q-values dominant.
+
+**Solutions**: Tune target entropy; reduce alpha; add gradient clipping to actor.
+
+### 3. Offline RL: Policy Worse Than Behavior
+
+**Symptom**: Learned policy underperforms the data-collection policy.
+
+**Causes**: Extrapolation error; insufficient data coverage.
+
+**Solutions**: Use conservative methods (CQL); increase BC weight; ensure diverse data.
+
+### 4. Unstable Value Estimates
+
+**Symptom**: Value predictions explode or oscillate.
+
+**Solutions**: Use target networks; reduce LR; increase batch size; use value clipping in PPO.
+
+---
+
+## Production Considerations
+
+### Simulation vs Real World
+
+- **Sim-to-real gap**: Policies trained in sim may fail in real environments—use domain randomization, system identification.
+- **Safety**: Add constraints (e.g., CBF), human override, redundant sensors.
+
+### Inference
+
+- **Deterministic policies**: Use `deterministic=True` at deployment to avoid sampling variance.
+- **Latency**: SAC/PPO inference is cheap (single forward pass); bottleneck is often environment step.
+
+### Monitoring
+
+- **Value and return trends**: Track mean episode return, value predictions.
+- **Exploration**: Monitor entropy; low entropy may indicate collapse.
+- **Data distribution**: In offline RL, track how far policy deviates from behavior.
 
 ---
 
 ## Best Practices
 
-1. **SAC**: Default choice for continuous control; tune `ent_coef`
-2. **TD3**: When SAC is unstable; use `policy_delay`
-3. **Offline RL**: Validate on in-distribution; be conservative
-4. **Model-based**: Short horizons to reduce model error
-5. **Replay buffer**: Large buffer for off-policy
-6. **Normalization**: Obs/action normalization helps
+1. **Start simple**: CartPole / Pendulum before complex envs.
+2. **Tune sparingly**: PPO and SAC have sensible defaults; change one hyperparameter at a time.
+3. **Use GAE**: Almost always improves PPO.
+4. **Replay buffer size**: 1e6 for SAC; larger can help for long-horizon tasks.
+5. **Seed everything**: For reproducibility (env, torch, numpy).
 
 ---
 
-## Summary
+## References
 
-| Topic | Key Point |
-|-------|-----------|
-| SAC | Max entropy, off-policy, robust |
-| TD3 | Twin Q, delayed policy, smoothing |
-| Model-based | Learn dynamics, plan or generate data |
-| Offline RL | No interaction; CQL, IQL |
-| MuZero | Implicit world model, MCTS in latent space |
-| Curiosity | RND, ICM for exploration |
-
-**Libraries**: `stable-baselines3`, `d4rl`, `gymnasium`
+- [Proximal Policy Optimization Algorithms](https://arxiv.org/abs/1707.06347) – Schulman et al., 2017
+- [Soft Actor-Critic](https://arxiv.org/abs/1801.01290) – Haarnoja et al., 2018
+- [Conservative Q-Learning for Offline Reinforcement Learning](https://arxiv.org/abs/2006.04779) – Kumar et al., 2020
+- [A Minimalist Approach to Offline Reinforcement Learning](https://arxiv.org/abs/2106.06860) – TD3+BC, Fujimoto & Gu, 2021
+- [Offline Reinforcement Learning: Tutorial, Review, and Perspectives](https://arxiv.org/abs/2005.01643) – Levine et al., 2020
+- [Stable-Baselines3](https://github.com/DLR-RM/stable-baselines3) – PPO, SAC implementations
+- [OpenAI Spinning Up](https://spinningup.openai.com/) – Educational RL material

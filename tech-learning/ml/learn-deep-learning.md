@@ -1,859 +1,1861 @@
-# Deep Learning: Complete Guide with Examples
+# Deep Learning: Comprehensive Guide from Foundations to Advanced
 
 ## Table of Contents
 1. [Introduction to Deep Learning](#introduction-to-deep-learning)
-2. [Neural Networks Fundamentals](#neural-networks-fundamentals)
-3. [Activation Functions](#activation-functions)
-4. [Backpropagation](#backpropagation)
-5. [Optimization Algorithms](#optimization-algorithms)
-6. [Regularization Techniques](#regularization-techniques)
-7. [Architectures](#architectures)
-8. [Transfer Learning](#transfer-learning)
-9. [Practical Examples](#practical-examples)
-10. [Tools and Frameworks](#tools-and-frameworks)
+2. [Perceptrons and the Linear Unit](#perceptrons-and-the-linear-unit)
+3. [Multi-Layer Perceptrons (MLPs)](#multi-layer-perceptrons-mlps)
+4. [Activation Functions — Complete Reference](#activation-functions--complete-reference)
+5. [Backpropagation — Full Mathematical Derivation](#backpropagation--full-mathematical-derivation)
+6. [Weight Initialization](#weight-initialization)
+7. [Normalization Layers](#normalization-layers)
+8. [Regularization Techniques](#regularization-techniques)
+9. [Vanishing and Exploding Gradients](#vanishing-and-exploding-gradients)
+10. [Residual Connections and Skip Connections](#residual-connections-and-skip-connections)
+11. [Attention Mechanisms](#attention-mechanisms)
+12. [Sequence Models: RNN, LSTM, GRU](#sequence-models-rnn-lstm-gru)
+13. [Modern Architecture Overview](#modern-architecture-overview)
+14. [Transfer Learning and Fine-Tuning](#transfer-learning-and-fine-tuning)
+15. [Training Tricks and Practical Tips](#training-tricks-and-practical-tips)
+16. [Full PyTorch Training Pipeline](#full-pytorch-training-pipeline)
 
 ---
 
 ## Introduction to Deep Learning
 
-Deep Learning is a subset of machine learning that uses neural networks with multiple layers (hence "deep") to learn hierarchical representations of data. Unlike traditional ML, deep learning can automatically discover features from raw data.
+Deep learning is a branch of machine learning that uses artificial neural networks with many layers (hence *deep*) to learn hierarchical representations of data. Unlike classical ML methods that rely on hand-crafted features, deep networks learn features automatically, layer by layer, from raw input.
 
-### Key Characteristics
-- **Hierarchical Feature Learning**: Each layer learns increasingly complex features
-- **Automatic Feature Extraction**: No manual feature engineering required
-- **Scalability**: Performance improves with more data
-- **Versatility**: Works with images, text, audio, and structured data
+### Why Deep Learning Works
 
-### When to Use Deep Learning
-- ✅ Large amounts of data available
-- ✅ Complex patterns in data
-- ✅ Non-linear relationships
-- ✅ Image, text, or sequence data
-- ❌ Small datasets (< 1000 samples)
-- ❌ Need for interpretability
-- ❌ Limited computational resources
+The **Universal Approximation Theorem** (Cybenko, 1989; Hornik, 1991) guarantees that a feedforward network with a single hidden layer containing a finite number of neurons can approximate any continuous function on a compact subset of ℝⁿ to arbitrary precision. However, deep networks can represent exponentially more functions efficiently than shallow ones.
+
+**Key insights:**
+- Each layer learns a different level of abstraction
+- Depth allows composition of non-linear transformations
+- Gradient-based optimization finds good solutions in practice despite non-convexity
+- Stochastic training + large models generalize surprisingly well
+
+### Mathematical Notation
+
+Throughout this document we use:
+- \( x \in \mathbb{R}^d \): input vector
+- \( W^{(l)} \): weight matrix for layer \( l \)
+- \( b^{(l)} \): bias vector for layer \( l \)
+- \( a^{(l)} \): pre-activation at layer \( l \) (also called logits)
+- \( h^{(l)} \): post-activation at layer \( l \) (hidden state)
+- \( \sigma(\cdot) \): activation function
+- \( \hat{y} \): model output / prediction
+- \( \mathcal{L} \): loss function
 
 ---
 
-## Neural Networks Fundamentals
+## Perceptrons and the Linear Unit
 
-### Perceptron: The Building Block
+### The Biological Inspiration
 
-A perceptron is the simplest neural network unit:
+The perceptron (Rosenblatt, 1958) is modeled after neurons: it receives multiple signals, sums them (weighted), and fires if the total exceeds a threshold.
+
+### Mathematical Formulation
+
+Given input \( x = [x_1, x_2, \ldots, x_d]^\top \) and weights \( w = [w_1, w_2, \ldots, w_d]^\top \):
+
+\[
+z = w^\top x + b = \sum_{i=1}^{d} w_i x_i + b
+\]
+
+\[
+\hat{y} = \text{step}(z) = \begin{cases} 1 & \text{if } z \geq 0 \\ 0 & \text{otherwise} \end{cases}
+\]
+
+**Perceptron update rule** (for misclassified sample \( (x_i, y_i) \)):
+\[
+w \leftarrow w + \eta (y_i - \hat{y}_i) x_i
+\]
+\[
+b \leftarrow b + \eta (y_i - \hat{y}_i)
+\]
+
+**Limitation**: The perceptron convergence theorem guarantees convergence only for *linearly separable* data.
+
+### Perceptron Implementation from Scratch
 
 ```python
 import numpy as np
 import matplotlib.pyplot as plt
 
 class Perceptron:
-    def __init__(self, learning_rate=0.01, n_iterations=1000):
-        self.learning_rate = learning_rate
+    """Single-layer perceptron with step activation."""
+
+    def __init__(self, learning_rate: float = 0.1, n_iterations: int = 1000):
+        self.lr = learning_rate
         self.n_iterations = n_iterations
         self.weights = None
         self.bias = None
-        self.errors = []
-    
-    def fit(self, X, y):
+        self.errors_per_epoch = []
+
+    def fit(self, X: np.ndarray, y: np.ndarray):
         n_samples, n_features = X.shape
         self.weights = np.zeros(n_features)
-        self.bias = 0
-        
+        self.bias = 0.0
+
         for _ in range(self.n_iterations):
-            error_count = 0
-            for idx, x_i in enumerate(X):
-                linear_output = np.dot(x_i, self.weights) + self.bias
-                y_predicted = self.activation(linear_output)
-                
-                # Update rule
-                update = self.learning_rate * (y[idx] - y_predicted)
-                self.weights += update * x_i
-                self.bias += update
-                
-                if y[idx] != y_predicted:
-                    error_count += 1
-            
-            self.errors.append(error_count)
-            if error_count == 0:
+            errors = 0
+            for xi, yi in zip(X, y):
+                pred = self._predict_single(xi)
+                delta = self.lr * (yi - pred)
+                self.weights += delta * xi
+                self.bias += delta
+                errors += int(delta != 0)
+            self.errors_per_epoch.append(errors)
+            if errors == 0:
                 break
-    
-    def activation(self, x):
-        return np.where(x >= 0, 1, 0)
-    
+
+    def _predict_single(self, x):
+        return 1 if (np.dot(x, self.weights) + self.bias) >= 0 else 0
+
     def predict(self, X):
-        linear_output = np.dot(X, self.weights) + self.bias
-        return self.activation(linear_output)
+        return np.array([self._predict_single(xi) for xi in X])
 
-# Example usage
-X = np.array([[0, 0], [0, 1], [1, 0], [1, 1]])
-y = np.array([0, 0, 0, 1])  # AND gate
+    def plot_errors(self):
+        plt.figure(figsize=(8, 4))
+        plt.plot(self.errors_per_epoch)
+        plt.xlabel("Epoch")
+        plt.ylabel("Misclassifications")
+        plt.title("Perceptron Learning Curve")
+        plt.grid(True)
+        plt.tight_layout()
+        plt.show()
 
-perceptron = Perceptron(learning_rate=0.1, n_iterations=10)
-perceptron.fit(X, y)
-predictions = perceptron.predict(X)
-print(f"Predictions: {predictions}")
-```
 
-### Multi-Layer Perceptron (MLP)
+# --- AND gate example ---
+X_and = np.array([[0, 0], [0, 1], [1, 0], [1, 1]])
+y_and = np.array([0, 0, 0, 1])
 
-```python
-import tensorflow as tf
-from tensorflow import keras
-from tensorflow.keras import layers
-import numpy as np
+p = Perceptron(learning_rate=0.1)
+p.fit(X_and, y_and)
+print("AND gate predictions:", p.predict(X_and))  # [0 0 0 1]
 
-# Generate non-linearly separable data
-from sklearn.datasets import make_moons
-X, y = make_moons(n_samples=1000, noise=0.1, random_state=42)
-
-# Build MLP
-model = keras.Sequential([
-    layers.Dense(10, activation='relu', input_shape=(2,)),
-    layers.Dense(10, activation='relu'),
-    layers.Dense(1, activation='sigmoid')
-])
-
-model.compile(
-    optimizer='adam',
-    loss='binary_crossentropy',
-    metrics=['accuracy']
-)
-
-# Train
-history = model.fit(X, y, epochs=100, batch_size=32, validation_split=0.2, verbose=0)
-
-# Evaluate
-test_loss, test_accuracy = model.evaluate(X, y, verbose=0)
-print(f"Test Accuracy: {test_accuracy:.2f}")
+# --- XOR — NOT linearly separable (perceptron fails) ---
+X_xor = np.array([[0, 0], [0, 1], [1, 0], [1, 1]])
+y_xor = np.array([0, 1, 1, 0])
+p_xor = Perceptron(learning_rate=0.1, n_iterations=100)
+p_xor.fit(X_xor, y_xor)
+print("XOR predictions (will fail):", p_xor.predict(X_xor))  # Not [0 1 1 0]
 ```
 
 ---
 
-## Activation Functions
+## Multi-Layer Perceptrons (MLPs)
 
-Activation functions introduce non-linearity into neural networks, enabling them to learn complex patterns.
+### Architecture
 
-### Common Activation Functions
+An MLP stacks multiple layers of linear units followed by non-linear activations:
+
+```
+Input (x) → [W₁, b₁] → σ → [W₂, b₂] → σ → ... → [Wₗ, bₗ] → output (ŷ)
+```
+
+### Forward Pass — Full Mathematics
+
+For a network with \( L \) layers:
+
+**Layer 0** (input): \( h^{(0)} = x \)
+
+**Layers 1 through L**:
+\[
+a^{(l)} = W^{(l)} h^{(l-1)} + b^{(l)}
+\]
+\[
+h^{(l)} = \sigma\left(a^{(l)}\right)
+\]
+
+**Output**: \( \hat{y} = h^{(L)} \)
+
+Where:
+- \( W^{(l)} \in \mathbb{R}^{n_l \times n_{l-1}} \)
+- \( b^{(l)} \in \mathbb{R}^{n_l} \)
+- \( \sigma \) is an element-wise activation function
+
+### Vectorized Batch Forward Pass
+
+For a batch of \( m \) samples, \( X \in \mathbb{R}^{m \times d} \):
+
+\[
+A^{(l)} = H^{(l-1)} W^{(l)\top} + \mathbf{1} b^{(l)\top}
+\]
+\[
+H^{(l)} = \sigma\left(A^{(l)}\right)
+\]
+
+### MLP from Scratch (NumPy)
+
+```python
+import numpy as np
+
+class MLP:
+    """
+    Multi-Layer Perceptron implemented from scratch.
+    Supports arbitrary depth, ReLU hidden activations, sigmoid output.
+    """
+
+    def __init__(self, layer_sizes: list, learning_rate: float = 0.01):
+        """
+        layer_sizes: e.g. [2, 4, 4, 1]  → input dim=2, two hidden layers of 4, output dim=1
+        """
+        self.lr = learning_rate
+        self.weights = []
+        self.biases = []
+
+        # He initialization for ReLU layers
+        for i in range(len(layer_sizes) - 1):
+            fan_in = layer_sizes[i]
+            scale = np.sqrt(2.0 / fan_in)
+            W = np.random.randn(layer_sizes[i], layer_sizes[i + 1]) * scale
+            b = np.zeros((1, layer_sizes[i + 1]))
+            self.weights.append(W)
+            self.biases.append(b)
+
+        self.activations = []  # store for backprop
+        self.z_values = []
+
+    # ---- Activation functions ----
+    @staticmethod
+    def relu(z):
+        return np.maximum(0, z)
+
+    @staticmethod
+    def relu_deriv(z):
+        return (z > 0).astype(float)
+
+    @staticmethod
+    def sigmoid(z):
+        return 1.0 / (1.0 + np.exp(-np.clip(z, -500, 500)))
+
+    @staticmethod
+    def sigmoid_deriv(z):
+        s = MLP.sigmoid(z)
+        return s * (1.0 - s)
+
+    # ---- Forward pass ----
+    def forward(self, X):
+        self.activations = [X]
+        self.z_values = []
+        H = X
+        L = len(self.weights)
+
+        for i, (W, b) in enumerate(zip(self.weights, self.biases)):
+            Z = H @ W + b
+            self.z_values.append(Z)
+            if i < L - 1:
+                H = self.relu(Z)
+            else:
+                H = self.sigmoid(Z)  # output layer
+            self.activations.append(H)
+
+        return H
+
+    # ---- Backward pass ----
+    def backward(self, X, y):
+        m = X.shape[0]
+        L = len(self.weights)
+        output = self.activations[-1]
+
+        # Output layer delta (binary cross-entropy + sigmoid)
+        delta = (output - y) / m  # shape: (m, output_dim)
+
+        grads_W = [None] * L
+        grads_b = [None] * L
+
+        for i in reversed(range(L)):
+            grads_W[i] = self.activations[i].T @ delta
+            grads_b[i] = delta.sum(axis=0, keepdims=True)
+
+            if i > 0:
+                # Backpropagate through ReLU
+                delta = delta @ self.weights[i].T * self.relu_deriv(self.z_values[i - 1])
+
+        # Update
+        for i in range(L):
+            self.weights[i] -= self.lr * grads_W[i]
+            self.biases[i] -= self.lr * grads_b[i]
+
+    def binary_cross_entropy(self, y_pred, y_true):
+        eps = 1e-12
+        y_pred = np.clip(y_pred, eps, 1 - eps)
+        return -np.mean(y_true * np.log(y_pred) + (1 - y_true) * np.log(1 - y_pred))
+
+    def train(self, X, y, epochs: int = 2000, print_every: int = 200):
+        history = []
+        for epoch in range(1, epochs + 1):
+            y_pred = self.forward(X)
+            loss = self.binary_cross_entropy(y_pred, y)
+            self.backward(X, y)
+            history.append(loss)
+            if epoch % print_every == 0:
+                acc = np.mean((y_pred > 0.5).astype(int) == y)
+                print(f"Epoch {epoch:5d} | Loss: {loss:.4f} | Acc: {acc:.4f}")
+        return history
+
+
+# --- XOR problem (needs hidden layers) ---
+X_xor = np.array([[0, 0], [0, 1], [1, 0], [1, 1]], dtype=float)
+y_xor = np.array([[0], [1], [1], [0]], dtype=float)
+
+mlp = MLP(layer_sizes=[2, 8, 8, 1], learning_rate=0.1)
+history = mlp.train(X_xor, y_xor, epochs=5000, print_every=1000)
+preds = mlp.forward(X_xor)
+print("\nXOR predictions:", (preds > 0.5).astype(int).flatten())
+```
+
+---
+
+## Activation Functions — Complete Reference
+
+Activation functions introduce non-linearity, enabling networks to approximate complex functions. Without them, a deep network collapses to a single linear transformation.
+
+### 1. Sigmoid
+
+\[
+\sigma(x) = \frac{1}{1 + e^{-x}}, \quad \sigma'(x) = \sigma(x)(1 - \sigma(x))
+\]
+
+- **Range**: (0, 1)
+- **Pros**: Smooth, interpretable as probability, bounded output
+- **Cons**: Vanishing gradients (gradient < 0.25 always), not zero-centered, slow convergence
+- **Use**: Output layer for binary classification, gates in LSTM
+
+### 2. Tanh
+
+\[
+\tanh(x) = \frac{e^x - e^{-x}}{e^x + e^{-x}}, \quad \tanh'(x) = 1 - \tanh^2(x)
+\]
+
+- **Range**: (-1, 1)
+- **Pros**: Zero-centered (better gradient flow than sigmoid), stronger gradients than sigmoid
+- **Cons**: Still suffers from vanishing gradients for large |x|
+- **Use**: Hidden layers in RNNs/LSTMs, shallow networks
+
+### 3. ReLU (Rectified Linear Unit)
+
+\[
+\text{ReLU}(x) = \max(0, x), \quad \text{ReLU}'(x) = \begin{cases} 1 & x > 0 \\ 0 & x \leq 0 \end{cases}
+\]
+
+- **Range**: [0, ∞)
+- **Pros**: No vanishing gradient for positive inputs, computationally efficient, sparse activations (biological plausibility), fast convergence
+- **Cons**: Dying ReLU problem (neurons that output 0 always can stop learning), not zero-centered, unbounded
+- **Use**: Default choice for hidden layers in CNNs and MLPs
+
+### 4. Leaky ReLU
+
+\[
+\text{LeakyReLU}(x) = \begin{cases} x & x > 0 \\ \alpha x & x \leq 0 \end{cases}, \quad \alpha \approx 0.01
+\]
+
+- **Range**: (-∞, ∞)
+- **Pros**: Fixes dying ReLU, allows small negative gradient
+- **Cons**: The \( \alpha \) hyperparameter must be tuned; Parametric ReLU (PReLU) learns \( \alpha \)
+- **Use**: When dying ReLU is a concern
+
+### 5. ELU (Exponential Linear Unit)
+
+\[
+\text{ELU}(x) = \begin{cases} x & x > 0 \\ \alpha(e^x - 1) & x \leq 0 \end{cases}
+\]
+
+- **Range**: (−α, ∞)
+- **Pros**: Smooth everywhere, negative values push mean activations closer to zero (self-normalizing property), robust to noisy inputs
+- **Cons**: Computationally more expensive than ReLU
+- **Use**: Deeper networks, alternative to batch normalization
+
+### 6. GELU (Gaussian Error Linear Unit)
+
+\[
+\text{GELU}(x) = x \cdot \Phi(x) = x \cdot \frac{1}{2}\left[1 + \text{erf}\left(\frac{x}{\sqrt{2}}\right)\right]
+\]
+
+Approximation: \( \text{GELU}(x) \approx 0.5x\left(1 + \tanh\left[\sqrt{2/\pi}(x + 0.044715x^3)\right]\right) \)
+
+- **Range**: ≈ (-0.17, ∞)
+- **Pros**: State-of-the-art in Transformers (BERT, GPT), smooth stochastic gating (weights input by its quantile), better than ReLU for NLP
+- **Cons**: More expensive, not straightforward to interpret
+- **Use**: Transformer models, NLP
+
+### 7. Swish
+
+\[
+\text{Swish}(x) = x \cdot \sigma(\beta x) = \frac{x}{1 + e^{-\beta x}}
+\]
+
+When \( \beta = 1 \): \( \text{Swish}(x) = x \cdot \sigma(x) \)
+
+- **Range**: ≈ (-0.28, ∞)
+- **Pros**: Smooth, non-monotonic, generally outperforms ReLU on deeper networks, discovered via neural architecture search
+- **Cons**: Slightly more expensive than ReLU
+- **Use**: EfficientNet, recent vision models
+
+### 8. Mish
+
+\[
+\text{Mish}(x) = x \cdot \tanh(\text{softplus}(x)) = x \cdot \tanh(\ln(1 + e^x))
+\]
+
+- **Range**: ≈ (-0.31, ∞)
+- **Pros**: Smooth, non-monotonic, self-gated, slightly better than Swish in practice
+- **Cons**: Most expensive of common activations
+- **Use**: YOLOv4, recent object detection models
+
+### 9. Softmax (output layer only)
+
+\[
+\text{softmax}(z)_i = \frac{e^{z_i}}{\sum_{j=1}^{K} e^{z_j}}
+\]
+
+Used in the output layer for multi-class classification. Converts logits to a probability distribution.
+
+### Comparison Code
 
 ```python
 import numpy as np
 import matplotlib.pyplot as plt
 
-x = np.linspace(-5, 5, 100)
+x = np.linspace(-4, 4, 400)
 
-# Sigmoid
 def sigmoid(x):
-    return 1 / (1 + np.exp(-x))
+    return 1 / (1 + np.exp(-np.clip(x, -500, 500)))
 
-# Tanh
 def tanh(x):
     return np.tanh(x)
 
-# ReLU
 def relu(x):
     return np.maximum(0, x)
 
-# Leaky ReLU
-def leaky_relu(x, alpha=0.01):
-    return np.maximum(alpha * x, x)
+def leaky_relu(x, alpha=0.1):
+    return np.where(x > 0, x, alpha * x)
 
-# ELU
 def elu(x, alpha=1.0):
-    return np.where(x > 0, x, alpha * (np.exp(x) - 1))
+    return np.where(x > 0, x, alpha * (np.exp(np.minimum(x, 0)) - 1))
 
-# Swish
-def swish(x):
-    return x * sigmoid(x)
+def gelu(x):
+    return 0.5 * x * (1 + np.tanh(np.sqrt(2 / np.pi) * (x + 0.044715 * x**3)))
 
-# Plot all functions
-fig, axes = plt.subplots(2, 3, figsize=(15, 10))
-functions = [
-    (sigmoid, 'Sigmoid'),
-    (tanh, 'Tanh'),
-    (relu, 'ReLU'),
-    (leaky_relu, 'Leaky ReLU'),
-    (elu, 'ELU'),
-    (swish, 'Swish')
-]
+def swish(x, beta=1.0):
+    return x * sigmoid(beta * x)
 
-for idx, (func, name) in enumerate(functions):
-    ax = axes[idx // 3, idx % 3]
-    ax.plot(x, func(x))
-    ax.set_title(name)
-    ax.grid(True)
-    ax.axhline(y=0, color='k', linestyle='--', alpha=0.3)
-    ax.axvline(x=0, color='k', linestyle='--', alpha=0.3)
+def mish(x):
+    return x * np.tanh(np.log1p(np.exp(np.minimum(x, 20))))
 
+activations = {
+    "Sigmoid": sigmoid,
+    "Tanh": tanh,
+    "ReLU": relu,
+    "Leaky ReLU": leaky_relu,
+    "ELU": elu,
+    "GELU": gelu,
+    "Swish": swish,
+    "Mish": mish,
+}
+
+fig, axes = plt.subplots(2, 4, figsize=(18, 8))
+axes = axes.flatten()
+
+for ax, (name, fn) in zip(axes, activations.items()):
+    ax.plot(x, fn(x), linewidth=2, color="steelblue")
+    ax.set_title(name, fontsize=13)
+    ax.axhline(0, color="k", linewidth=0.5, linestyle="--")
+    ax.axvline(0, color="k", linewidth=0.5, linestyle="--")
+    ax.set_xlim(-4, 4)
+    ax.grid(True, alpha=0.3)
+
+plt.suptitle("Activation Functions Comparison", fontsize=16, y=1.01)
 plt.tight_layout()
+plt.savefig("activation_functions.png", dpi=150, bbox_inches="tight")
 plt.show()
 ```
 
-### When to Use Which Activation
+### Quick Selection Guide
 
-- **Sigmoid**: Output layer for binary classification (0-1 probability)
-- **Tanh**: Hidden layers, output range (-1, 1)
-- **ReLU**: Most common for hidden layers, fast convergence
-- **Leaky ReLU**: Prevents dying ReLU problem
-- **Softmax**: Output layer for multi-class classification
+| Problem Type | Output Activation | Hidden Activation |
+|---|---|---|
+| Binary classification | Sigmoid | ReLU / GELU |
+| Multi-class classification | Softmax | ReLU / GELU |
+| Regression | Linear (none) | ReLU / ELU |
+| NLP / Transformers | Softmax | GELU |
+| Object detection | Sigmoid / Softmax | LeakyReLU / Mish |
 
-### Example: Comparing Activations
+---
+
+## Backpropagation — Full Mathematical Derivation
+
+Backpropagation (Rumelhart et al., 1986) is an efficient algorithm for computing the gradient of the loss \( \mathcal{L} \) with respect to all parameters using the **chain rule of calculus**.
+
+### The Chain Rule
+
+If \( f = f(g(x)) \), then:
+\[
+\frac{df}{dx} = \frac{df}{dg} \cdot \frac{dg}{dx}
+\]
+
+For vectors (Jacobians):
+\[
+\frac{\partial \mathbf{f}}{\partial \mathbf{x}} = \frac{\partial \mathbf{f}}{\partial \mathbf{g}} \cdot \frac{\partial \mathbf{g}}{\partial \mathbf{x}}
+\]
+
+### Forward Pass (2-layer network)
+
+Consider a 2-layer network with:
+- \( z^{(1)} = W^{(1)} x + b^{(1)} \)
+- \( h^{(1)} = \text{ReLU}(z^{(1)}) \)
+- \( z^{(2)} = W^{(2)} h^{(1)} + b^{(2)} \)
+- \( \hat{y} = \sigma(z^{(2)}) \) (sigmoid for binary classification)
+- \( \mathcal{L} = -[y \log \hat{y} + (1-y)\log(1-\hat{y})] \) (binary cross-entropy)
+
+### Backward Pass (Derivation Step by Step)
+
+**Step 1**: \( \frac{\partial \mathcal{L}}{\partial \hat{y}} = -\frac{y}{\hat{y}} + \frac{1-y}{1-\hat{y}} \)
+
+**Step 2**: \( \frac{\partial \hat{y}}{\partial z^{(2)}} = \hat{y}(1 - \hat{y}) \)
+
+Therefore: \( \frac{\partial \mathcal{L}}{\partial z^{(2)}} = \hat{y} - y \) (elegant result!)
+
+**Step 3** (gradients w.r.t. output layer):
+\[
+\frac{\partial \mathcal{L}}{\partial W^{(2)}} = \frac{\partial \mathcal{L}}{\partial z^{(2)}} \cdot \frac{\partial z^{(2)}}{\partial W^{(2)}} = (\hat{y} - y) \cdot h^{(1)\top}
+\]
+\[
+\frac{\partial \mathcal{L}}{\partial b^{(2)}} = \hat{y} - y
+\]
+
+**Step 4** (gradient flowing back to hidden layer):
+\[
+\frac{\partial \mathcal{L}}{\partial h^{(1)}} = W^{(2)\top} \cdot \frac{\partial \mathcal{L}}{\partial z^{(2)}} = W^{(2)\top} (\hat{y} - y)
+\]
+
+**Step 5**: ReLU backward:
+\[
+\frac{\partial \mathcal{L}}{\partial z^{(1)}} = \frac{\partial \mathcal{L}}{\partial h^{(1)}} \odot \mathbf{1}[z^{(1)} > 0]
+\]
+
+**Step 6** (gradients w.r.t. first layer):
+\[
+\frac{\partial \mathcal{L}}{\partial W^{(1)}} = \frac{\partial \mathcal{L}}{\partial z^{(1)}} \cdot x^\top
+\]
+\[
+\frac{\partial \mathcal{L}}{\partial b^{(1)}} = \frac{\partial \mathcal{L}}{\partial z^{(1)}}
+\]
+
+### The δ (Error Signal) Notation
+
+Define the *error signal* at layer \( l \):
+\[
+\delta^{(l)} = \frac{\partial \mathcal{L}}{\partial a^{(l)}}
+\]
+
+Then the recurrence is:
+\[
+\delta^{(L)} = \nabla_{a^{(L)}} \mathcal{L}
+\]
+\[
+\delta^{(l)} = \left(W^{(l+1)\top} \delta^{(l+1)}\right) \odot \sigma'\left(a^{(l)}\right)
+\]
+
+And gradients:
+\[
+\frac{\partial \mathcal{L}}{\partial W^{(l)}} = \delta^{(l)} \cdot h^{(l-1)\top}
+\]
+\[
+\frac{\partial \mathcal{L}}{\partial b^{(l)}} = \delta^{(l)}
+\]
+
+### Computational Graph and Automatic Differentiation
+
+Modern frameworks (PyTorch, JAX) build computational graphs and apply the chain rule automatically using **reverse-mode automatic differentiation** (also called backprop). Each operation records its local gradient, and gradients are accumulated in reverse topological order.
 
 ```python
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Dense
-from tensorflow.keras.optimizers import Adam
+import torch
+import torch.nn as nn
 
-# Test different activations
-activations = ['relu', 'tanh', 'sigmoid', 'elu']
-results = {}
+# PyTorch autograd demonstration
+x = torch.tensor([[0.5, -0.3]], requires_grad=False)
+W1 = torch.randn(2, 4, requires_grad=True)
+b1 = torch.zeros(4, requires_grad=True)
+W2 = torch.randn(4, 1, requires_grad=True)
+b2 = torch.zeros(1, requires_grad=True)
 
-for activation in activations:
-    model = Sequential([
-        Dense(64, activation=activation, input_shape=(784,)),
-        Dense(64, activation=activation),
-        Dense(10, activation='softmax')
-    ])
-    
-    model.compile(
-        optimizer=Adam(learning_rate=0.001),
-        loss='sparse_categorical_crossentropy',
-        metrics=['accuracy']
-    )
-    
-    # Train on MNIST (example)
-    # history = model.fit(X_train, y_train, epochs=5, verbose=0)
-    # results[activation] = history.history['accuracy'][-1]
+# Forward pass
+z1 = x @ W1 + b1
+h1 = torch.relu(z1)
+z2 = h1 @ W2 + b2
+y_pred = torch.sigmoid(z2)
 
-print("Activation Function Comparison:")
-for act, acc in results.items():
-    print(f"{act}: {acc:.4f}")
+# Loss
+y_true = torch.tensor([[1.0]])
+loss = nn.BCELoss()(y_pred, y_true)
+
+# Backward pass — PyTorch computes all gradients
+loss.backward()
+
+print("dL/dW1:", W1.grad.shape)  # (2, 4)
+print("dL/dW2:", W2.grad.shape)  # (4, 1)
 ```
 
 ---
 
-## Backpropagation
+## Weight Initialization
 
-Backpropagation is the algorithm used to train neural networks by computing gradients and updating weights.
+Proper initialization prevents vanishing/exploding gradients from the very start of training.
 
-### Manual Backpropagation Example
+### Why Initialization Matters
+
+If weights are too large → activations explode → gradients explode  
+If weights are too small → activations vanish → gradients vanish  
+If all weights are equal → all neurons learn the same function (symmetry breaking)
+
+### 1. Xavier / Glorot Initialization (2010)
+
+Designed for **sigmoid** and **tanh** activations. Maintains variance of activations and gradients across layers.
+
+**Condition**: Var(output) = Var(input)
+
+**Formula**: 
+\[
+W \sim \mathcal{U}\left(-\sqrt{\frac{6}{n_{in} + n_{out}}}, \sqrt{\frac{6}{n_{in} + n_{out}}}\right)
+\]
+or equivalently:
+\[
+W \sim \mathcal{N}\left(0, \frac{2}{n_{in} + n_{out}}\right)
+\]
+
+### 2. He / Kaiming Initialization (2015)
+
+Designed for **ReLU** activations. Accounts for the fact that ReLU zeros out half the neurons.
+
+\[
+W \sim \mathcal{N}\left(0, \frac{2}{n_{in}}\right)
+\]
+
+**Fan-in mode** (recommended for ReLU): \( \text{std} = \sqrt{2 / n_{in}} \)  
+**Fan-out mode**: \( \text{std} = \sqrt{2 / n_{out}} \)
+
+### 3. Orthogonal Initialization
+
+Initializes weight matrices as (approximately) orthogonal matrices via SVD. Preserves gradient norms exactly for linear networks and helps deep RNNs.
+
+\[
+W = UV^\top \quad \text{from SVD: } A = U \Sigma V^\top
+\]
+
+### 4. LeCun Initialization
+
+\[
+W \sim \mathcal{N}\left(0, \frac{1}{n_{in}}\right)
+\]
+Original suggestion by LeCun (1998), appropriate for SELU activations (self-normalizing).
+
+### Implementation Comparison
 
 ```python
-import numpy as np
+import torch
+import torch.nn as nn
 
-class SimpleNeuralNetwork:
-    def __init__(self, input_size, hidden_size, output_size, learning_rate=0.1):
-        self.learning_rate = learning_rate
-        
-        # Initialize weights with small random values
-        self.W1 = np.random.randn(input_size, hidden_size) * 0.1
-        self.b1 = np.zeros((1, hidden_size))
-        self.W2 = np.random.randn(hidden_size, output_size) * 0.1
-        self.b2 = np.zeros((1, output_size))
-    
-    def sigmoid(self, x):
-        return 1 / (1 + np.exp(-np.clip(x, -250, 250)))
-    
-    def sigmoid_derivative(self, x):
-        s = self.sigmoid(x)
-        return s * (1 - s)
-    
-    def forward(self, X):
-        # Forward pass
-        self.z1 = np.dot(X, self.W1) + self.b1
-        self.a1 = self.sigmoid(self.z1)
-        self.z2 = np.dot(self.a1, self.W2) + self.b2
-        self.a2 = self.sigmoid(self.z2)
-        return self.a2
-    
-    def backward(self, X, y, output):
-        m = X.shape[0]  # Number of samples
-        
-        # Output layer error
-        dz2 = output - y
-        dW2 = (1/m) * np.dot(self.a1.T, dz2)
-        db2 = (1/m) * np.sum(dz2, axis=0, keepdims=True)
-        
-        # Hidden layer error
-        da1 = np.dot(dz2, self.W2.T)
-        dz1 = da1 * self.sigmoid_derivative(self.z1)
-        dW1 = (1/m) * np.dot(X.T, dz1)
-        db1 = (1/m) * np.sum(dz1, axis=0, keepdims=True)
-        
-        # Update weights
-        self.W2 -= self.learning_rate * dW2
-        self.b2 -= self.learning_rate * db2
-        self.W1 -= self.learning_rate * dW1
-        self.b1 -= self.learning_rate * db1
-    
-    def train(self, X, y, epochs=1000):
-        for epoch in range(epochs):
-            output = self.forward(X)
-            self.backward(X, y, output)
-            
-            if epoch % 100 == 0:
-                loss = np.mean((output - y) ** 2)
-                print(f"Epoch {epoch}, Loss: {loss:.4f}")
+def compare_initializations(activation="relu"):
+    """Compare gradient magnitudes under different initializations."""
+    layers_per_init = {
+        "zeros": lambda t: nn.init.zeros_(t),
+        "uniform": lambda t: nn.init.uniform_(t, -0.5, 0.5),
+        "xavier_uniform": nn.init.xavier_uniform_,
+        "xavier_normal": nn.init.xavier_normal_,
+        "he_uniform": lambda t: nn.init.kaiming_uniform_(t, nonlinearity=activation),
+        "he_normal": lambda t: nn.init.kaiming_normal_(t, nonlinearity=activation),
+        "orthogonal": nn.init.orthogonal_,
+    }
 
-# Example: XOR problem
-X = np.array([[0, 0], [0, 1], [1, 0], [1, 1]])
-y = np.array([[0], [1], [1], [0]])
+    act_fn = nn.ReLU() if activation == "relu" else nn.Tanh()
+    n_layers = 10
+    dim = 256
 
-nn = SimpleNeuralNetwork(input_size=2, hidden_size=4, output_size=1, learning_rate=0.5)
-nn.train(X, y, epochs=1000)
+    print(f"\nActivation: {activation}")
+    print(f"{'Initialization':<20} {'Mean std across layers':>25}")
+    print("-" * 50)
 
-# Test
-predictions = nn.forward(X)
-print("\nPredictions:")
-print(predictions)
+    for name, init_fn in layers_per_init.items():
+        x = torch.randn(32, dim)
+        stds = [x.std().item()]
+
+        for _ in range(n_layers):
+            W = torch.empty(dim, dim)
+            init_fn(W)
+            x = act_fn(x @ W)
+            stds.append(x.std().item())
+
+        print(f"{name:<20} {' -> '.join(f'{s:.3f}' for s in stds[::3])}")
+
+compare_initializations("relu")
+compare_initializations("tanh")
+
+
+# PyTorch built-in initialization
+class InitializedMLP(nn.Module):
+    def __init__(self, sizes):
+        super().__init__()
+        layers = []
+        for i in range(len(sizes) - 1):
+            layers.append(nn.Linear(sizes[i], sizes[i+1]))
+            if i < len(sizes) - 2:
+                layers.append(nn.ReLU())
+        self.net = nn.Sequential(*layers)
+        self._init_weights()
+
+    def _init_weights(self):
+        for m in self.modules():
+            if isinstance(m, nn.Linear):
+                nn.init.kaiming_normal_(m.weight, nonlinearity="relu")
+                nn.init.zeros_(m.bias)
+
+    def forward(self, x):
+        return self.net(x)
 ```
 
 ---
 
-## Optimization Algorithms
+## Normalization Layers
 
-### Gradient Descent Variants
+Normalization layers stabilize and accelerate training by ensuring activations have consistent scale.
 
-```python
-import numpy as np
-import matplotlib.pyplot as plt
+### 1. Batch Normalization (Ioffe & Szegedy, 2015)
 
-# Generate sample loss landscape
-def loss_function(x):
-    return x**2 + 2*x + 1
+Normalizes over the **batch dimension** for each feature.
 
-def gradient(x):
-    return 2*x + 2
+**Forward pass** (for feature dimension \( j \), over batch \( B \)):
 
-# 1. Batch Gradient Descent
-def batch_gradient_descent(x_init, learning_rate=0.1, epochs=100):
-    x = x_init
-    history = [x]
-    
-    for _ in range(epochs):
-        grad = gradient(x)
-        x = x - learning_rate * grad
-        history.append(x)
-    
-    return x, history
+\[
+\mu_j = \frac{1}{|B|} \sum_{i \in B} x_{i,j}
+\]
+\[
+\sigma_j^2 = \frac{1}{|B|} \sum_{i \in B} (x_{i,j} - \mu_j)^2
+\]
+\[
+\hat{x}_{i,j} = \frac{x_{i,j} - \mu_j}{\sqrt{\sigma_j^2 + \epsilon}}
+\]
+\[
+y_{i,j} = \gamma_j \hat{x}_{i,j} + \beta_j
+\]
 
-# 2. Stochastic Gradient Descent (SGD)
-def sgd(x_init, learning_rate=0.1, epochs=100):
-    x = x_init
-    history = [x]
-    
-    for _ in range(epochs):
-        # In real scenario, use random sample
-        grad = gradient(x) + np.random.normal(0, 0.1)  # Add noise
-        x = x - learning_rate * grad
-        history.append(x)
-    
-    return x, history
+Where \( \gamma_j, \beta_j \) are **learnable** scale and shift parameters.
 
-# 3. Momentum
-def momentum(x_init, learning_rate=0.1, momentum_coef=0.9, epochs=100):
-    x = x_init
-    v = 0  # velocity
-    history = [x]
-    
-    for _ in range(epochs):
-        grad = gradient(x)
-        v = momentum_coef * v - learning_rate * grad
-        x = x + v
-        history.append(x)
-    
-    return x, history
+**At inference**: uses running statistics (exponential moving average of \( \mu \) and \( \sigma^2 \)):
+\[
+\mu_{\text{run}} \leftarrow (1 - m) \cdot \mu_{\text{run}} + m \cdot \mu_B
+\]
 
-# 4. Adam Optimizer (simplified)
-def adam(x_init, learning_rate=0.01, epochs=100):
-    x = x_init
-    m = 0  # First moment
-    v = 0  # Second moment
-    beta1 = 0.9
-    beta2 = 0.999
-    epsilon = 1e-8
-    history = [x]
-    
-    for t in range(1, epochs + 1):
-        grad = gradient(x)
-        
-        # Update biased first moment estimate
-        m = beta1 * m + (1 - beta1) * grad
-        
-        # Update biased second raw moment estimate
-        v = beta2 * v + (1 - beta2) * grad**2
-        
-        # Compute bias-corrected first moment estimate
-        m_hat = m / (1 - beta1**t)
-        
-        # Compute bias-corrected second raw moment estimate
-        v_hat = v / (1 - beta2**t)
-        
-        # Update parameters
-        x = x - learning_rate * m_hat / (np.sqrt(v_hat) + epsilon)
-        history.append(x)
-    
-    return x, history
+**Effects**: Reduces internal covariate shift, acts as regularizer, allows higher learning rates, reduces sensitivity to initialization.
 
-# Compare optimizers
-x_init = 5.0
-x_batch, hist_batch = batch_gradient_descent(x_init)
-x_sgd, hist_sgd = sgd(x_init)
-x_momentum, hist_momentum = momentum(x_init)
-x_adam, hist_adam = adam(x_init)
+**Limitation**: Problematic with small batch sizes; behavior differs between train and test.
 
-plt.figure(figsize=(12, 6))
-plt.plot(hist_batch, label='Batch GD', alpha=0.7)
-plt.plot(hist_sgd, label='SGD', alpha=0.7)
-plt.plot(hist_momentum, label='Momentum', alpha=0.7)
-plt.plot(hist_adam, label='Adam', alpha=0.7)
-plt.xlabel('Iteration')
-plt.ylabel('Parameter Value')
-plt.title('Optimizer Comparison')
-plt.legend()
-plt.grid(True)
-plt.show()
-```
+### 2. Layer Normalization (Ba et al., 2016)
 
-### Using Optimizers in TensorFlow/Keras
+Normalizes over the **feature dimension** for each sample (not across batch).
+
+\[
+\mu_i = \frac{1}{D} \sum_{j=1}^{D} x_{i,j}, \quad \sigma_i^2 = \frac{1}{D} \sum_{j=1}^{D} (x_{i,j} - \mu_i)^2
+\]
+\[
+\hat{x}_{i,j} = \frac{x_{i,j} - \mu_i}{\sqrt{\sigma_i^2 + \epsilon}}, \quad y_{i,j} = \gamma_j \hat{x}_{i,j} + \beta_j
+\]
+
+**Advantages over BN**: Works identically during train and inference, works with batch size 1, standard for **Transformers and RNNs**.
+
+### 3. Group Normalization (Wu & He, 2018)
+
+Divides channels into \( G \) groups and normalizes within each group. A middle ground between BN (batch) and LN (layer).
+
+\[
+\hat{x}_{i,j} = \frac{x_{i,j} - \mu_{i,g}}{\sqrt{\sigma_{i,g}^2 + \epsilon}}
+\]
+
+Where \( g = \lfloor j \cdot G / C \rfloor \) is the group index. Reduces to LN when G=1, to Instance Norm when G=C.
+
+**Used in**: Object detection (Mask R-CNN), when batch size is small.
+
+### 4. Instance Normalization
+
+Normalizes over spatial (H, W) dimensions per-channel per-sample. Used in style transfer.
+
+### Normalization Comparison Code
 
 ```python
-from tensorflow.keras.optimizers import SGD, Adam, RMSprop, Adagrad
+import torch
+import torch.nn as nn
 
-# SGD with momentum
-sgd_optimizer = SGD(learning_rate=0.01, momentum=0.9, nesterov=True)
+batch_size, channels, height, width = 4, 8, 32, 32
 
-# Adam optimizer
-adam_optimizer = Adam(learning_rate=0.001, beta_1=0.9, beta_2=0.999)
+x = torch.randn(batch_size, channels, height, width)
 
-# RMSprop
-rmsprop_optimizer = RMSprop(learning_rate=0.001, rho=0.9)
+# Batch Normalization
+bn = nn.BatchNorm2d(channels)
 
-# Adagrad
-adagrad_optimizer = Adagrad(learning_rate=0.01)
+# Layer Normalization (over all features per sample)
+ln = nn.LayerNorm([channels, height, width])
 
-# Use in model
-model.compile(optimizer=adam_optimizer, loss='categorical_crossentropy', metrics=['accuracy'])
+# Group Normalization (G=4 groups of 2 channels each)
+gn = nn.GroupNorm(num_groups=4, num_channels=channels)
+
+# Instance Normalization
+inst_n = nn.InstanceNorm2d(channels, affine=True)
+
+for name, norm in [("BatchNorm", bn), ("LayerNorm", ln),
+                    ("GroupNorm", gn), ("InstanceNorm", inst_n)]:
+    out = norm(x)
+    print(f"{name:<15}: input std={x.std():.4f}, output std={out.std():.4f} (detached)")
 ```
+
+### When to Use Which
+
+| Scenario | Recommended Normalization |
+|---|---|
+| CNNs with large batches | Batch Normalization |
+| Transformers, NLP | Layer Normalization |
+| Object detection, small batches | Group Normalization |
+| Style transfer | Instance Normalization |
+| RNNs | Layer Normalization |
 
 ---
 
 ## Regularization Techniques
 
-### 1. Dropout
+Regularization reduces overfitting by constraining or modifying the training process.
+
+### 1. L2 Regularization (Weight Decay)
+
+Adds a penalty proportional to the squared magnitude of weights:
+
+\[
+\mathcal{L}_{\text{total}} = \mathcal{L}_{\text{task}} + \frac{\lambda}{2} \sum_{l} \|W^{(l)}\|_F^2
+\]
+
+The gradient update becomes:
+\[
+W \leftarrow W - \eta \left(\nabla_W \mathcal{L} + \lambda W\right) = (1 - \eta\lambda) W - \eta \nabla_W \mathcal{L}
+\]
+
+This **shrinks** weights toward zero at each step, hence "weight decay." In Adam, L2 regularization ≠ weight decay (see AdamW).
+
+### 2. L1 Regularization (Lasso)
+
+\[
+\mathcal{L}_{\text{total}} = \mathcal{L}_{\text{task}} + \lambda \sum_{l} \|W^{(l)}\|_1
+\]
+
+Gradient: \( \lambda \cdot \text{sign}(W) \) — promotes **sparse** solutions (many weights go to exactly zero).
+
+### 3. Dropout (Srivastava et al., 2014)
+
+During training, randomly set activations to zero with probability \( p \):
+
+\[
+h_i^{\text{train}} = \begin{cases} 0 & \text{with probability } p \\ \frac{h_i}{1-p} & \text{with probability } 1-p \end{cases}
+\]
+
+The \( \frac{1}{1-p} \) factor (inverted dropout) ensures expected output is unchanged.
+
+At **test time**, use all neurons (no dropout). The network has implicitly trained an exponential ensemble of \( 2^N \) sub-networks.
+
+**Effect**: Prevents co-adaptation of neurons, acts like bagging of sub-networks.
+
+### 4. DropConnect
+
+Randomly drops weights (rather than activations). Generalizes dropout.
+
+### 5. Spatial Dropout (Dropout2D)
+
+For CNNs: drops entire feature maps (2D channels) rather than individual neurons.
+
+### 6. Early Stopping
+
+Monitor validation loss; stop training when it stops improving (with patience):
+
+```
+if val_loss improves:
+    save checkpoint
+    patience_counter = 0
+else:
+    patience_counter += 1
+    if patience_counter >= patience:
+        stop training, restore best checkpoint
+```
+
+### 7. Data Augmentation
+
+Artificially increases dataset size by applying label-preserving transformations. Effectively injects domain-specific prior knowledge.
+
+**Image augmentations**: horizontal flip, rotation, crop, color jitter, CutOut, Mixup, CutMix, AutoAugment, RandAugment.
+
+**Text augmentations**: synonym replacement, back-translation, insertion, deletion, swap.
+
+### 8. Label Smoothing
+
+Instead of hard one-hot labels, use:
+
+\[
+y_{\text{smooth}} = (1 - \epsilon) \cdot y_{\text{onehot}} + \frac{\epsilon}{K}
+\]
+
+Prevents the model from becoming over-confident, improves calibration.
 
 ```python
-from tensorflow.keras import layers, Sequential
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
 
-model = Sequential([
-    layers.Dense(128, activation='relu', input_shape=(784,)),
-    layers.Dropout(0.5),  # Drop 50% of neurons randomly
-    layers.Dense(64, activation='relu'),
-    layers.Dropout(0.3),  # Drop 30% of neurons
-    layers.Dense(10, activation='softmax')
+# ---- Dropout demonstration ----
+class RegularizedMLP(nn.Module):
+    def __init__(self, in_dim, hidden_dim, out_dim, dropout_rate=0.5):
+        super().__init__()
+        self.net = nn.Sequential(
+            nn.Linear(in_dim, hidden_dim),
+            nn.BatchNorm1d(hidden_dim),
+            nn.ReLU(),
+            nn.Dropout(p=dropout_rate),
+            nn.Linear(hidden_dim, hidden_dim),
+            nn.BatchNorm1d(hidden_dim),
+            nn.ReLU(),
+            nn.Dropout(p=dropout_rate),
+            nn.Linear(hidden_dim, out_dim),
+        )
+
+    def forward(self, x):
+        return self.net(x)
+
+
+# L2 regularization via weight_decay in optimizer
+model = RegularizedMLP(784, 256, 10)
+optimizer = torch.optim.Adam(model.parameters(), lr=1e-3, weight_decay=1e-4)
+
+# Label smoothing loss
+class LabelSmoothingLoss(nn.Module):
+    def __init__(self, classes, smoothing=0.1):
+        super().__init__()
+        self.smoothing = smoothing
+        self.cls = classes
+
+    def forward(self, logits, targets):
+        confidence = 1.0 - self.smoothing
+        smooth_val = self.smoothing / (self.cls - 1)
+        one_hot = torch.zeros_like(logits).scatter_(1, targets.unsqueeze(1), 1)
+        smooth_labels = one_hot * confidence + (1 - one_hot) * smooth_val
+        log_probs = F.log_softmax(logits, dim=-1)
+        loss = -(smooth_labels * log_probs).sum(dim=-1).mean()
+        return loss
+
+# Data augmentation with torchvision
+from torchvision import transforms
+
+train_transform = transforms.Compose([
+    transforms.RandomHorizontalFlip(p=0.5),
+    transforms.RandomRotation(degrees=15),
+    transforms.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2),
+    transforms.RandomCrop(32, padding=4),
+    transforms.ToTensor(),
+    transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
 ])
-```
 
-### 2. L1 and L2 Regularization
+# Mixup augmentation
+def mixup_data(x, y, alpha=0.2):
+    """Apply MixUp: randomly interpolate between two samples."""
+    lam = np.random.beta(alpha, alpha) if alpha > 0 else 1.0
+    batch_size = x.size(0)
+    index = torch.randperm(batch_size)
+    mixed_x = lam * x + (1 - lam) * x[index]
+    y_a, y_b = y, y[index]
+    return mixed_x, y_a, y_b, lam
 
-```python
-from tensorflow.keras import regularizers
-
-model = Sequential([
-    layers.Dense(128, activation='relu', input_shape=(784,),
-                 kernel_regularizer=regularizers.l2(0.01)),  # L2 regularization
-    layers.Dense(64, activation='relu',
-                 kernel_regularizer=regularizers.l1_l2(l1=0.01, l2=0.01)),  # L1+L2
-    layers.Dense(10, activation='softmax')
-])
-```
-
-### 3. Batch Normalization
-
-```python
-model = Sequential([
-    layers.Dense(128, input_shape=(784,)),
-    layers.BatchNormalization(),
-    layers.Activation('relu'),
-    layers.Dense(64),
-    layers.BatchNormalization(),
-    layers.Activation('relu'),
-    layers.Dense(10, activation='softmax')
-])
-```
-
-### 4. Early Stopping
-
-```python
-from tensorflow.keras.callbacks import EarlyStopping
-
-early_stopping = EarlyStopping(
-    monitor='val_loss',
-    patience=10,
-    restore_best_weights=True,
-    verbose=1
-)
-
-history = model.fit(
-    X_train, y_train,
-    validation_data=(X_val, y_val),
-    epochs=100,
-    callbacks=[early_stopping]
-)
-```
-
-### 5. Data Augmentation
-
-```python
-from tensorflow.keras.preprocessing.image import ImageDataGenerator
-
-datagen = ImageDataGenerator(
-    rotation_range=20,
-    width_shift_range=0.2,
-    height_shift_range=0.2,
-    horizontal_flip=True,
-    zoom_range=0.2,
-    fill_mode='nearest'
-)
-
-train_generator = datagen.flow_from_directory(
-    'data/train',
-    target_size=(224, 224),
-    batch_size=32,
-    class_mode='categorical'
-)
+def mixup_criterion(criterion, pred, y_a, y_b, lam):
+    return lam * criterion(pred, y_a) + (1 - lam) * criterion(pred, y_b)
 ```
 
 ---
 
-## Architectures
+## Vanishing and Exploding Gradients
 
-### 1. Feedforward Neural Network
+### The Problem
+
+During backpropagation, gradients are multiplied across \( L \) layers:
+\[
+\frac{\partial \mathcal{L}}{\partial W^{(1)}} = \frac{\partial \mathcal{L}}{\partial h^{(L)}} \cdot \prod_{l=2}^{L} \frac{\partial h^{(l)}}{\partial h^{(l-1)}}
+\]
+
+Each factor \( \frac{\partial h^{(l)}}{\partial h^{(l-1)}} = W^{(l)\top} \text{diag}(\sigma'(a^{(l)})) \).
+
+**If** eigenvalues of these Jacobians are consistently < 1: gradients **vanish** exponentially with depth.  
+**If** eigenvalues > 1: gradients **explode** exponentially.
+
+For sigmoid: \( \sigma'(x) \leq 0.25 \) always → vanishing almost guaranteed in deep sigmoid networks.
+
+### Causes
+
+1. **Activation functions with saturating gradients** (sigmoid, tanh)
+2. **Poor weight initialization** (too large or too small)
+3. **Very deep networks** without residual connections
+
+### Solutions
+
+| Problem | Solution |
+|---|---|
+| Vanishing (sigmoid/tanh) | Use ReLU, GELU, or other non-saturating activations |
+| Vanishing (deep nets) | Residual connections (ResNet), Highway networks |
+| Exploding gradients | Gradient clipping |
+| Both | Proper initialization (He, Xavier) |
+| Training instability | Batch/Layer normalization |
+| Long sequences | LSTM, GRU (gating), attention mechanisms |
+
+### Gradient Clipping
 
 ```python
-def create_feedforward_nn(input_dim, hidden_dims, output_dim, dropout_rate=0.5):
-    model = Sequential()
-    
-    # Input layer
-    model.add(layers.Dense(hidden_dims[0], activation='relu', input_shape=(input_dim,)))
-    model.add(layers.BatchNormalization())
-    model.add(layers.Dropout(dropout_rate))
-    
-    # Hidden layers
-    for dim in hidden_dims[1:]:
-        model.add(layers.Dense(dim, activation='relu'))
-        model.add(layers.BatchNormalization())
-        model.add(layers.Dropout(dropout_rate))
-    
-    # Output layer
-    model.add(layers.Dense(output_dim, activation='softmax'))
-    
-    return model
+import torch
 
-# Example
-model = create_feedforward_nn(
-    input_dim=784,
-    hidden_dims=[512, 256, 128],
-    output_dim=10
-)
-model.summary()
+# Clip by norm (recommended for most cases)
+torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
+
+# Clip by value
+torch.nn.utils.clip_grad_value_(model.parameters(), clip_value=0.5)
+
+# In training loop:
+for batch in dataloader:
+    optimizer.zero_grad()
+    loss = criterion(model(x), y)
+    loss.backward()
+    torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
+    optimizer.step()
 ```
 
-### 2. Autoencoder
+### Detecting Gradient Problems
 
 ```python
-def create_autoencoder(input_dim, encoding_dim):
-    # Encoder
-    encoder = Sequential([
-        layers.Dense(128, activation='relu', input_shape=(input_dim,)),
-        layers.Dense(64, activation='relu'),
-        layers.Dense(encoding_dim, activation='relu')
-    ])
-    
-    # Decoder
-    decoder = Sequential([
-        layers.Dense(64, activation='relu', input_shape=(encoding_dim,)),
-        layers.Dense(128, activation='relu'),
-        layers.Dense(input_dim, activation='sigmoid')
-    ])
-    
-    # Autoencoder
-    autoencoder = Sequential([encoder, decoder])
-    
-    return autoencoder, encoder, decoder
-
-autoencoder, encoder, decoder = create_autoencoder(input_dim=784, encoding_dim=32)
-
-autoencoder.compile(optimizer='adam', loss='mse')
+def check_gradients(model):
+    """Check gradient statistics after backward pass."""
+    print(f"\n{'Layer':<30} {'Mean grad':<15} {'Max grad':<15} {'Norm':<10}")
+    print("-" * 70)
+    for name, param in model.named_parameters():
+        if param.grad is not None:
+            g = param.grad.data
+            print(f"{name:<30} {g.mean().item():<15.6f} {g.max().item():<15.6f} {g.norm().item():<10.4f}")
 ```
 
-### 3. Variational Autoencoder (VAE)
+---
+
+## Residual Connections and Skip Connections
+
+### The Core Idea (He et al., 2016)
+
+Instead of learning \( H(x) \) directly, learn the *residual*:
+\[
+H(x) = F(x) + x
+\]
+where \( F(x) = H(x) - x \) is the **residual function**.
+
+If the optimal transformation is close to identity, it's easier to learn \( F(x) \approx 0 \) than \( H(x) \approx x \).
+
+### Why Residuals Help
+
+**Gradient flow**: The identity shortcut provides a direct path for gradients to flow backward without going through non-linear transformations:
+\[
+\frac{\partial \mathcal{L}}{\partial x} = \frac{\partial \mathcal{L}}{\partial H} \cdot \left(\frac{\partial F}{\partial x} + 1\right)
+\]
+
+The "+1" guarantees gradients always flow, even when \( \frac{\partial F}{\partial x} \approx 0 \).
+
+### ResNet Basic Block
 
 ```python
-class VAE(tf.keras.Model):
-    def __init__(self, latent_dim):
-        super(VAE, self).__init__()
-        self.latent_dim = latent_dim
-        
-        # Encoder
-        self.encoder = Sequential([
-            layers.Dense(512, activation='relu'),
-            layers.Dense(256, activation='relu'),
-            layers.Dense(latent_dim * 2)  # Mean and log variance
-        ])
-        
-        # Decoder
-        self.decoder = Sequential([
-            layers.Dense(256, activation='relu', input_shape=(latent_dim,)),
-            layers.Dense(512, activation='relu'),
-            layers.Dense(784, activation='sigmoid')
-        ])
-    
-    def sample(self, z_mean, z_log_var):
-        batch = tf.shape(z_mean)[0]
-        dim = tf.shape(z_mean)[1]
-        epsilon = tf.keras.backend.random_normal(shape=(batch, dim))
-        return z_mean + tf.exp(0.5 * z_log_var) * epsilon
-    
-    def encode(self, x):
-        z = self.encoder(x)
-        z_mean, z_log_var = tf.split(z, num_or_size_splits=2, axis=1)
-        return z_mean, z_log_var
-    
-    def decode(self, z):
-        return self.decoder(z)
-    
-    def call(self, x):
-        z_mean, z_log_var = self.encode(x)
-        z = self.sample(z_mean, z_log_var)
-        reconstructed = self.decode(z)
-        return reconstructed, z_mean, z_log_var
+import torch
+import torch.nn as nn
 
-# Loss function for VAE
-def vae_loss(x, reconstructed, z_mean, z_log_var):
-    reconstruction_loss = tf.keras.losses.binary_crossentropy(x, reconstructed)
-    reconstruction_loss = tf.reduce_mean(reconstruction_loss)
-    
-    kl_loss = -0.5 * tf.reduce_mean(
-        1 + z_log_var - tf.square(z_mean) - tf.exp(z_log_var)
+class ResidualBlock(nn.Module):
+    """
+    Standard ResNet residual block with two 3x3 convolutions.
+    """
+    expansion = 1
+
+    def __init__(self, in_channels, out_channels, stride=1):
+        super().__init__()
+        self.conv1 = nn.Conv2d(in_channels, out_channels, 3, stride=stride,
+                               padding=1, bias=False)
+        self.bn1 = nn.BatchNorm2d(out_channels)
+        self.relu = nn.ReLU(inplace=True)
+        self.conv2 = nn.Conv2d(out_channels, out_channels, 3, stride=1,
+                               padding=1, bias=False)
+        self.bn2 = nn.BatchNorm2d(out_channels)
+
+        # Shortcut connection (projection if dimensions change)
+        self.shortcut = nn.Sequential()
+        if stride != 1 or in_channels != out_channels:
+            self.shortcut = nn.Sequential(
+                nn.Conv2d(in_channels, out_channels, 1, stride=stride, bias=False),
+                nn.BatchNorm2d(out_channels)
+            )
+
+    def forward(self, x):
+        identity = self.shortcut(x)
+        out = self.relu(self.bn1(self.conv1(x)))
+        out = self.bn2(self.conv2(out))
+        out = self.relu(out + identity)  # ← the residual addition
+        return out
+
+
+class BottleneckBlock(nn.Module):
+    """
+    ResNet-50/101/152 bottleneck block: 1x1 → 3x3 → 1x1 convolutions.
+    More efficient than BasicBlock for deep networks.
+    """
+    expansion = 4
+
+    def __init__(self, in_channels, out_channels, stride=1):
+        super().__init__()
+        mid = out_channels
+        expanded = out_channels * self.expansion
+
+        self.conv1 = nn.Conv2d(in_channels, mid, 1, bias=False)
+        self.bn1 = nn.BatchNorm2d(mid)
+        self.conv2 = nn.Conv2d(mid, mid, 3, stride=stride, padding=1, bias=False)
+        self.bn2 = nn.BatchNorm2d(mid)
+        self.conv3 = nn.Conv2d(mid, expanded, 1, bias=False)
+        self.bn3 = nn.BatchNorm2d(expanded)
+        self.relu = nn.ReLU(inplace=True)
+
+        self.shortcut = nn.Sequential()
+        if stride != 1 or in_channels != expanded:
+            self.shortcut = nn.Sequential(
+                nn.Conv2d(in_channels, expanded, 1, stride=stride, bias=False),
+                nn.BatchNorm2d(expanded)
+            )
+
+    def forward(self, x):
+        identity = self.shortcut(x)
+        out = self.relu(self.bn1(self.conv1(x)))
+        out = self.relu(self.bn2(self.conv2(out)))
+        out = self.bn3(self.conv3(out))
+        out = self.relu(out + identity)
+        return out
+```
+
+### Dense Connections (DenseNet, Huang et al., 2017)
+
+Each layer receives feature maps from **all** preceding layers:
+\[
+h^{(l)} = H_l\left([h^{(0)}, h^{(1)}, \ldots, h^{(l-1)}]\right)
+\]
+
+Where \( [\cdot] \) is channel-wise concatenation.
+
+---
+
+## Attention Mechanisms
+
+### Scaled Dot-Product Attention (Vaswani et al., 2017)
+
+The fundamental building block of the Transformer architecture.
+
+**Inputs**:
+- Queries \( Q \in \mathbb{R}^{n \times d_k} \)
+- Keys \( K \in \mathbb{R}^{m \times d_k} \)
+- Values \( V \in \mathbb{R}^{m \times d_v} \)
+
+**Formula**:
+\[
+\text{Attention}(Q, K, V) = \text{softmax}\left(\frac{QK^\top}{\sqrt{d_k}}\right) V
+\]
+
+**Why divide by** \( \sqrt{d_k} \)? The dot products grow with \( d_k \), pushing softmax into regions with tiny gradients. Dividing by \( \sqrt{d_k} \) stabilizes gradients.
+
+### Multi-Head Attention
+
+Rather than performing a single attention, run \( h \) attention functions in parallel with different learned projections:
+
+\[
+\text{MultiHead}(Q, K, V) = \text{Concat}(\text{head}_1, \ldots, \text{head}_h) W^O
+\]
+\[
+\text{head}_i = \text{Attention}(Q W_i^Q, K W_i^K, V W_i^V)
+\]
+
+```python
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+import math
+
+class ScaledDotProductAttention(nn.Module):
+    def __init__(self, dropout=0.1):
+        super().__init__()
+        self.dropout = nn.Dropout(p=dropout)
+
+    def forward(self, Q, K, V, mask=None):
+        """
+        Q: (batch, heads, seq_q, d_k)
+        K: (batch, heads, seq_k, d_k)
+        V: (batch, heads, seq_k, d_v)
+        """
+        d_k = Q.size(-1)
+        scores = torch.matmul(Q, K.transpose(-2, -1)) / math.sqrt(d_k)
+
+        if mask is not None:
+            scores = scores.masked_fill(mask == 0, float("-inf"))
+
+        attn_weights = F.softmax(scores, dim=-1)
+        attn_weights = self.dropout(attn_weights)
+        output = torch.matmul(attn_weights, V)
+        return output, attn_weights
+
+
+class MultiHeadAttention(nn.Module):
+    def __init__(self, d_model: int, num_heads: int, dropout: float = 0.1):
+        super().__init__()
+        assert d_model % num_heads == 0
+        self.d_model = d_model
+        self.num_heads = num_heads
+        self.d_k = d_model // num_heads
+
+        self.W_q = nn.Linear(d_model, d_model, bias=False)
+        self.W_k = nn.Linear(d_model, d_model, bias=False)
+        self.W_v = nn.Linear(d_model, d_model, bias=False)
+        self.W_o = nn.Linear(d_model, d_model, bias=False)
+
+        self.attention = ScaledDotProductAttention(dropout=dropout)
+        self.dropout = nn.Dropout(dropout)
+
+    def split_heads(self, x):
+        B, S, D = x.shape
+        x = x.view(B, S, self.num_heads, self.d_k)
+        return x.transpose(1, 2)  # (B, heads, S, d_k)
+
+    def forward(self, query, key, value, mask=None):
+        B = query.size(0)
+
+        Q = self.split_heads(self.W_q(query))
+        K = self.split_heads(self.W_k(key))
+        V = self.split_heads(self.W_v(value))
+
+        x, attn_weights = self.attention(Q, K, V, mask=mask)
+
+        x = x.transpose(1, 2).contiguous().view(B, -1, self.d_model)
+        output = self.W_o(x)
+        return output, attn_weights
+
+
+# Usage
+mha = MultiHeadAttention(d_model=512, num_heads=8)
+x = torch.randn(2, 10, 512)  # batch=2, seq_len=10, d_model=512
+out, weights = mha(x, x, x)  # self-attention
+print("Output shape:", out.shape)     # (2, 10, 512)
+print("Attn weights:", weights.shape) # (2, 8, 10, 10)
+```
+
+---
+
+## Sequence Models: RNN, LSTM, GRU
+
+### Vanilla RNN
+
+The fundamental recurrence:
+\[
+h_t = \tanh(W_{hh} h_{t-1} + W_{xh} x_t + b_h)
+\]
+\[
+\hat{y}_t = W_{hy} h_t + b_y
+\]
+
+**Problem**: Suffers from vanishing gradients over long sequences because \( \frac{\partial h_t}{\partial h_{t-k}} \) involves products of Jacobians.
+
+### LSTM (Long Short-Term Memory — Hochreiter & Schmidhuber, 1997)
+
+LSTMs introduce a **cell state** \( c_t \) (the "memory") alongside the hidden state \( h_t \), controlled by three gates:
+
+**Forget gate** — what to erase from cell state:
+\[
+f_t = \sigma(W_f [h_{t-1}, x_t] + b_f)
+\]
+
+**Input gate** — what new information to write:
+\[
+i_t = \sigma(W_i [h_{t-1}, x_t] + b_i)
+\]
+\[
+\tilde{c}_t = \tanh(W_c [h_{t-1}, x_t] + b_c)
+\]
+
+**Cell state update**:
+\[
+c_t = f_t \odot c_{t-1} + i_t \odot \tilde{c}_t
+\]
+
+**Output gate** — what to expose from cell state:
+\[
+o_t = \sigma(W_o [h_{t-1}, x_t] + b_o)
+\]
+\[
+h_t = o_t \odot \tanh(c_t)
+\]
+
+The **linear update** of \( c_t \) (no sigmoid/tanh squashing) ensures gradients can flow through without vanishing.
+
+### GRU (Gated Recurrent Unit — Cho et al., 2014)
+
+A simpler alternative to LSTM with two gates instead of three:
+
+**Reset gate** — how much past hidden state to forget:
+\[
+r_t = \sigma(W_r [h_{t-1}, x_t] + b_r)
+\]
+
+**Update gate** — interpolation between old and new hidden state:
+\[
+z_t = \sigma(W_z [h_{t-1}, x_t] + b_z)
+\]
+
+**Candidate hidden state**:
+\[
+\tilde{h}_t = \tanh(W [r_t \odot h_{t-1}, x_t] + b)
+\]
+
+**New hidden state**:
+\[
+h_t = (1 - z_t) \odot h_{t-1} + z_t \odot \tilde{h}_t
+\]
+
+GRU has fewer parameters than LSTM and often performs comparably.
+
+### Implementation in PyTorch
+
+```python
+import torch
+import torch.nn as nn
+
+class LSTMFromScratch(nn.Module):
+    """LSTM cell implemented manually (for understanding)."""
+
+    def __init__(self, input_size: int, hidden_size: int):
+        super().__init__()
+        self.hidden_size = hidden_size
+        # All gates in one matrix multiplication for efficiency
+        self.W = nn.Linear(input_size + hidden_size, 4 * hidden_size)
+
+    def forward(self, x, states=None):
+        """
+        x: (batch, seq_len, input_size)
+        Returns: output (batch, seq_len, hidden_size), (h_n, c_n)
+        """
+        batch, seq_len, _ = x.shape
+        if states is None:
+            h = torch.zeros(batch, self.hidden_size, device=x.device)
+            c = torch.zeros(batch, self.hidden_size, device=x.device)
+        else:
+            h, c = states
+
+        outputs = []
+        for t in range(seq_len):
+            combined = torch.cat([h, x[:, t, :]], dim=1)
+            gates = self.W(combined)  # (batch, 4 * hidden_size)
+
+            f, i, g, o = gates.chunk(4, dim=1)
+            f = torch.sigmoid(f)  # forget gate
+            i = torch.sigmoid(i)  # input gate
+            g = torch.tanh(g)    # cell gate (candidate)
+            o = torch.sigmoid(o) # output gate
+
+            c = f * c + i * g
+            h = o * torch.tanh(c)
+            outputs.append(h.unsqueeze(1))
+
+        return torch.cat(outputs, dim=1), (h, c)
+
+
+# Using PyTorch built-in LSTM
+class SentimentLSTM(nn.Module):
+    def __init__(self, vocab_size, embed_dim, hidden_dim, n_layers, output_dim, dropout=0.5):
+        super().__init__()
+        self.embedding = nn.Embedding(vocab_size, embed_dim, padding_idx=0)
+        self.lstm = nn.LSTM(embed_dim, hidden_dim, n_layers,
+                            batch_first=True, dropout=dropout, bidirectional=True)
+        self.fc = nn.Linear(hidden_dim * 2, output_dim)  # *2 for bidirectional
+        self.dropout = nn.Dropout(dropout)
+
+    def forward(self, text, lengths):
+        embedded = self.dropout(self.embedding(text))  # (batch, seq, embed)
+        # Pack for efficiency
+        packed = nn.utils.rnn.pack_padded_sequence(embedded, lengths,
+                                                     batch_first=True,
+                                                     enforce_sorted=False)
+        packed_out, (h_n, c_n) = self.lstm(packed)
+        # Concatenate last forward and backward hidden states
+        hidden = torch.cat([h_n[-2], h_n[-1]], dim=1)
+        return self.fc(self.dropout(hidden))
+```
+
+---
+
+## Modern Architecture Overview
+
+### CNN (Convolutional Neural Networks)
+- **Inductive bias**: translation equivariance, local connectivity
+- **Key idea**: shared weight filters + pooling for spatial hierarchy
+- **Strengths**: Images, video, audio spectrograms
+- **Landmark models**: LeNet, AlexNet, VGG, ResNet, EfficientNet, ConvNeXt
+
+### RNN / LSTM / GRU
+- **Inductive bias**: sequential order, shared parameters across time
+- **Key idea**: recurrent hidden state captures temporal dependencies
+- **Strengths**: NLP (pre-Transformer), time series, speech
+- **Limitation**: Sequential computation, can't parallelize across time
+
+### Transformer
+- **Inductive bias**: permutation equivariance (position must be added explicitly)
+- **Key idea**: attention mechanism relates any two positions in O(1)
+- **Strengths**: NLP (BERT, GPT), vision (ViT), multimodal
+- **Limitation**: Quadratic complexity in sequence length for full attention
+
+### GNN (Graph Neural Networks)
+- **Inductive bias**: permutation equivariance over nodes, local neighborhood aggregation
+- **Key idea**: message passing — each node aggregates features from neighbors
+- **Strengths**: Social networks, molecular properties, knowledge graphs
+- **Common models**: GCN, GraphSAGE, GAT, GIN
+
+---
+
+## Transfer Learning and Fine-Tuning
+
+### Why Transfer Learning Works
+
+Pre-trained models have learned general representations (edges, textures, shapes for vision; grammar, semantics for NLP) from massive datasets. Fine-tuning adapts these representations to a new task with far less data.
+
+### Strategies
+
+**1. Feature extraction**: Freeze pre-trained layers, train only the new head.
+
+**2. Full fine-tuning**: Unfreeze all layers, train with small learning rate.
+
+**3. Gradual unfreezing** (ULMFiT strategy): Unfreeze one layer at a time, from last to first.
+
+**4. Layer-wise learning rate decay**: Lower LR for earlier layers, higher for later layers.
+
+### Fine-tuning with PyTorch
+
+```python
+import torch
+import torch.nn as nn
+from torchvision import models, transforms
+from torch.utils.data import DataLoader, Dataset
+
+# ── Strategy 1: Feature Extraction (frozen backbone) ──
+def create_feature_extractor(num_classes: int, model_name: str = "resnet50"):
+    backbone = getattr(models, model_name)(weights="IMAGENET1K_V2")
+
+    # Freeze all parameters
+    for param in backbone.parameters():
+        param.requires_grad = False
+
+    # Replace the final classifier
+    in_features = backbone.fc.in_features
+    backbone.fc = nn.Sequential(
+        nn.Linear(in_features, 512),
+        nn.ReLU(),
+        nn.Dropout(0.5),
+        nn.Linear(512, num_classes)
     )
-    
-    return reconstruction_loss + kl_loss
-```
+    return backbone
 
----
+# ── Strategy 2: Full fine-tuning with differential LR ──
+def create_fine_tuned_model(num_classes: int):
+    backbone = models.resnet50(weights="IMAGENET1K_V2")
+    in_features = backbone.fc.in_features
+    backbone.fc = nn.Linear(in_features, num_classes)
 
-## Transfer Learning
-
-### Using Pre-trained Models
-
-```python
-from tensorflow.keras.applications import VGG16, ResNet50, MobileNetV2
-from tensorflow.keras import layers, Model
-
-# Load pre-trained model (without top layers)
-base_model = VGG16(
-    weights='imagenet',
-    include_top=False,
-    input_shape=(224, 224, 3)
-)
-
-# Freeze base model layers
-base_model.trainable = False
-
-# Add custom classifier
-inputs = tf.keras.Input(shape=(224, 224, 3))
-x = base_model(inputs, training=False)
-x = layers.GlobalAveragePooling2D()(x)
-x = layers.Dense(128, activation='relu')(x)
-x = layers.Dropout(0.5)(x)
-outputs = layers.Dense(10, activation='softmax')(x)
-
-model = Model(inputs, outputs)
-
-model.compile(
-    optimizer='adam',
-    loss='categorical_crossentropy',
-    metrics=['accuracy']
-)
-```
-
-### Fine-tuning
-
-```python
-# Unfreeze some layers for fine-tuning
-base_model.trainable = True
-
-# Freeze early layers, fine-tune later layers
-for layer in base_model.layers[:-4]:
-    layer.trainable = False
-
-# Recompile with lower learning rate
-model.compile(
-    optimizer=tf.keras.optimizers.Adam(learning_rate=1e-5),
-    loss='categorical_crossentropy',
-    metrics=['accuracy']
-)
-```
-
----
-
-## Practical Examples
-
-### Example 1: Handwritten Digit Recognition (MNIST)
-
-```python
-import tensorflow as tf
-from tensorflow import keras
-from tensorflow.keras import layers
-
-# Load MNIST dataset
-(x_train, y_train), (x_test, y_test) = keras.datasets.mnist.load_data()
-
-# Preprocess
-x_train = x_train.reshape(60000, 784).astype('float32') / 255.0
-x_test = x_test.reshape(10000, 784).astype('float32') / 255.0
-
-# Build model
-model = keras.Sequential([
-    layers.Dense(512, activation='relu', input_shape=(784,)),
-    layers.Dropout(0.2),
-    layers.Dense(256, activation='relu'),
-    layers.Dropout(0.2),
-    layers.Dense(10, activation='softmax')
-])
-
-model.compile(
-    optimizer='adam',
-    loss='sparse_categorical_crossentropy',
-    metrics=['accuracy']
-)
-
-# Train
-history = model.fit(
-    x_train, y_train,
-    epochs=10,
-    batch_size=128,
-    validation_split=0.1,
-    callbacks=[
-        keras.callbacks.EarlyStopping(patience=3),
-        keras.callbacks.ModelCheckpoint('best_model.h5', save_best_only=True)
+    # Different LR for backbone vs head
+    param_groups = [
+        {"params": [p for n, p in backbone.named_parameters()
+                    if "fc" not in n], "lr": 1e-5},
+        {"params": backbone.fc.parameters(), "lr": 1e-3},
     ]
-)
+    return backbone, param_groups
 
-# Evaluate
-test_loss, test_accuracy = model.evaluate(x_test, y_test)
-print(f"Test Accuracy: {test_accuracy:.2f}")
+backbone, param_groups = create_fine_tuned_model(num_classes=10)
+optimizer = torch.optim.AdamW(param_groups, weight_decay=1e-4)
+
+# ── Strategy 3: Gradual unfreezing ──
+def gradual_unfreeze(model, epoch, unfreeze_schedule):
+    """
+    unfreeze_schedule: {epoch: layer_pattern_to_unfreeze}
+    Example: {0: "layer4", 2: "layer3", 4: "layer2"}
+    """
+    if epoch in unfreeze_schedule:
+        pattern = unfreeze_schedule[epoch]
+        unfrozen = 0
+        for name, param in model.named_parameters():
+            if pattern in name:
+                param.requires_grad = True
+                unfrozen += param.numel()
+        print(f"Epoch {epoch}: Unfroze layers matching '{pattern}' ({unfrozen:,} params)")
 ```
 
-### Example 2: Text Classification
+---
+
+## Training Tricks and Practical Tips
+
+### 1. Learning Rate Scheduling
+
+**Step decay**: Reduce LR by factor \( \gamma \) every \( k \) epochs:
+\[
+\eta_t = \eta_0 \cdot \gamma^{\lfloor t / k \rfloor}
+\]
+
+**Cosine annealing** (Loshchilov & Hutter, 2016):
+\[
+\eta_t = \eta_{\min} + \frac{1}{2}(\eta_{\max} - \eta_{\min})\left(1 + \cos\frac{\pi t}{T}\right)
+\]
+
+**Warmup**: Start with small LR, linearly increase to target over \( w \) steps. Critical for Transformers to stabilize early training.
+
+**One-Cycle Policy** (Smith, 2018): Linear warmup → cosine annealing, often finds better solutions faster.
+
+### 2. Mixed Precision Training (FP16/BF16)
+
+Use 16-bit floating point for forward/backward pass (faster, less memory), but maintain 32-bit master weights for numerical stability. Typical speedup: 1.5–2× on Ampere+ GPUs.
+
+**FP16 vs BF16**: 
+- **FP16** (float16): 5 exponent, 10 mantissa bits. Small dynamic range → risk of overflow/underflow; requires loss scaling (GradScaler). Common on older GPUs.
+- **BF16** (bfloat16): 8 exponent (same as FP32), 7 mantissa bits. Same dynamic range as FP32 → no loss scaling needed; more stable. Preferred on A100, H100, Intel Gaudi, Apple M-series.
+
+**GradScaler** (required for FP16, optional for BF16): Scale loss before backward to avoid underflow of small gradients; unscale before optimizer step; adjust scale factor based on gradient infinity checks.
 
 ```python
-from tensorflow.keras.preprocessing.text import Tokenizer
-from tensorflow.keras.preprocessing.sequence import pad_sequences
-from tensorflow.keras import layers, Sequential
+from torch.cuda.amp import GradScaler, autocast
 
-# Sample data
-texts = ["I love this product", "This is terrible", "Great service", ...]
-labels = [1, 0, 1, ...]  # Binary classification
+scaler = GradScaler()
 
-# Tokenize
-tokenizer = Tokenizer(num_words=10000, oov_token="<OOV>")
-tokenizer.fit_on_texts(texts)
-sequences = tokenizer.texts_to_sequences(texts)
-padded_sequences = pad_sequences(sequences, maxlen=100)
+for x, y in dataloader:
+    optimizer.zero_grad()
+    with autocast():  # Forward in FP16/BF16
+        logits = model(x)
+        loss = criterion(logits, y)
+    scaler.scale(loss).backward()  # Scaled backward
+    scaler.unscale_(optimizer)    # Unscale gradients
+    torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
+    scaler.step(optimizer)        # Step with unscaled gradients
+    scaler.update()               # Update scale factor for next iter
+```
 
-# Build model
-model = Sequential([
-    layers.Embedding(10000, 128, input_length=100),
-    layers.LSTM(64, dropout=0.2, recurrent_dropout=0.2),
-    layers.Dense(32, activation='relu'),
-    layers.Dense(1, activation='sigmoid')
-])
+**When to use**: BF16 if available (A100+); FP16 + GradScaler on V100 and older. Disable for layers sensitive to precision (e.g., some normalization, small batch LayerNorm).
 
-model.compile(
-    optimizer='adam',
-    loss='binary_crossentropy',
-    metrics=['accuracy']
-)
+### 3. Gradient Accumulation
 
-model.fit(padded_sequences, labels, epochs=10, validation_split=0.2)
+Simulate larger batch sizes when memory is limited:
+
+```python
+accumulation_steps = 4  # effective batch = actual_batch * accumulation_steps
+
+for step, (x, y) in enumerate(dataloader):
+    loss = criterion(model(x), y) / accumulation_steps
+    loss.backward()
+
+    if (step + 1) % accumulation_steps == 0:
+        torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
+        optimizer.step()
+        scheduler.step()
+        optimizer.zero_grad()
+```
+
+### 4. Additional Optimization Tricks
+
+**Exponential Moving Average (EMA)** of weights — often improves generalization:
+```python
+from copy import deepcopy
+ema_model = deepcopy(model)
+ema_decay = 0.999  # Per step: ema = decay * ema + (1 - decay) * param
+@torch.no_grad()
+def update_ema():
+    for p_ema, p in zip(ema_model.parameters(), model.parameters()):
+        p_ema.mul_(ema_decay).add_(p, alpha=1 - ema_decay)
+# Call update_ema() after each optimizer.step()
+```
+
+**Gradient checkpointing** — trade compute for memory; recompute activations during backward:
+```python
+from torch.utils.checkpoint import checkpoint
+def forward_with_checkpoint(self, x):
+    return checkpoint(self._forward_block, x, use_reentrant=False)
+# Use for large models when OOM; 30–50% memory savings, ~20% slower.
+```
+
+**torch.compile** (PyTorch 2.0+) — JIT compile for speed:
+```python
+model = torch.compile(model, mode="reduce-overhead")  # or "max-autotune"
+# 20–30% speedup on many models with minimal code change.
+```
+
+### 5. Learning Rate Finder
+
+```python
+def lr_finder(model, optimizer, criterion, dataloader,
+              start_lr=1e-7, end_lr=10, num_iter=100):
+    """Find optimal LR by exponentially increasing it and tracking loss."""
+    lrs, losses = [], []
+    lr_mult = (end_lr / start_lr) ** (1 / num_iter)
+
+    for param_group in optimizer.param_groups:
+        param_group["lr"] = start_lr
+
+    for i, (x, y) in enumerate(dataloader):
+        if i >= num_iter:
+            break
+        loss = criterion(model(x), y)
+        loss.backward()
+        optimizer.step()
+        optimizer.zero_grad()
+
+        current_lr = start_lr * (lr_mult ** i)
+        lrs.append(current_lr)
+        losses.append(loss.item())
+
+        for param_group in optimizer.param_groups:
+            param_group["lr"] = current_lr
+
+    return lrs, losses
 ```
 
 ---
 
-## Tools and Frameworks
+## Full PyTorch Training Pipeline
 
-### TensorFlow/Keras
+A production-quality training loop with all best practices:
 
-```bash
-pip install tensorflow
+```python
+import torch
+import torch.nn as nn
+import torch.optim as optim
+from torch.utils.data import DataLoader, Dataset, random_split
+from torchvision import datasets, transforms, models
+from torch.cuda.amp import GradScaler, autocast
+import time
+import os
+
+# ── Model ──
+class DeepMLP(nn.Module):
+    def __init__(self, input_dim: int, hidden_dims: list, output_dim: int,
+                 dropout: float = 0.3, use_bn: bool = True):
+        super().__init__()
+        dims = [input_dim] + hidden_dims + [output_dim]
+        layers = []
+        for i in range(len(dims) - 1):
+            layers.append(nn.Linear(dims[i], dims[i + 1]))
+            if i < len(dims) - 2:
+                if use_bn:
+                    layers.append(nn.BatchNorm1d(dims[i + 1]))
+                layers.append(nn.GELU())
+                layers.append(nn.Dropout(dropout))
+        self.net = nn.Sequential(*layers)
+        self._init_weights()
+
+    def _init_weights(self):
+        for m in self.modules():
+            if isinstance(m, nn.Linear):
+                nn.init.kaiming_normal_(m.weight, nonlinearity="relu")
+                nn.init.zeros_(m.bias)
+
+    def forward(self, x):
+        return self.net(x)
+
+
+# ── Custom Dataset ──
+class TabularDataset(Dataset):
+    def __init__(self, X, y):
+        self.X = torch.tensor(X, dtype=torch.float32)
+        self.y = torch.tensor(y, dtype=torch.long)
+
+    def __len__(self):
+        return len(self.X)
+
+    def __getitem__(self, idx):
+        return self.X[idx], self.y[idx]
+
+
+# ── Training / Evaluation Functions ──
+def train_epoch(model, loader, optimizer, criterion, scaler, device, clip_norm=1.0):
+    model.train()
+    total_loss, total_correct, total = 0.0, 0, 0
+
+    for x, y in loader:
+        x, y = x.to(device), y.to(device)
+        optimizer.zero_grad(set_to_none=True)
+
+        with autocast():  # Mixed precision
+            logits = model(x)
+            loss = criterion(logits, y)
+
+        scaler.scale(loss).backward()
+        scaler.unscale_(optimizer)
+        nn.utils.clip_grad_norm_(model.parameters(), clip_norm)
+        scaler.step(optimizer)
+        scaler.update()
+
+        total_loss += loss.item() * x.size(0)
+        total_correct += (logits.argmax(1) == y).sum().item()
+        total += x.size(0)
+
+    return total_loss / total, total_correct / total
+
+
+@torch.no_grad()
+def eval_epoch(model, loader, criterion, device):
+    model.eval()
+    total_loss, total_correct, total = 0.0, 0, 0
+
+    for x, y in loader:
+        x, y = x.to(device), y.to(device)
+        with autocast():
+            logits = model(x)
+            loss = criterion(logits, y)
+        total_loss += loss.item() * x.size(0)
+        total_correct += (logits.argmax(1) == y).sum().item()
+        total += x.size(0)
+
+    return total_loss / total, total_correct / total
+
+
+# ── Full Training Script ──
+def train(config: dict):
+    device = torch.device("cuda" if torch.cuda.is_available() else
+                          "mps" if torch.backends.mps.is_available() else "cpu")
+    print(f"Device: {device}")
+
+    # Data
+    import numpy as np
+    from sklearn.datasets import make_classification
+    X, y = make_classification(n_samples=10_000, n_features=50,
+                               n_informative=30, n_classes=5, random_state=42)
+
+    dataset = TabularDataset(X, y)
+    n_val = int(0.2 * len(dataset))
+    train_set, val_set = random_split(dataset, [len(dataset) - n_val, n_val])
+
+    train_loader = DataLoader(train_set, batch_size=config["batch_size"],
+                              shuffle=True, num_workers=2, pin_memory=True)
+    val_loader = DataLoader(val_set, batch_size=config["batch_size"] * 2,
+                            shuffle=False, num_workers=2, pin_memory=True)
+
+    # Model
+    model = DeepMLP(input_dim=50, hidden_dims=[256, 256, 128],
+                    output_dim=5, dropout=0.3).to(device)
+    print(f"Parameters: {sum(p.numel() for p in model.parameters()):,}")
+
+    # Optimizer + Scheduler + Loss
+    optimizer = optim.AdamW(model.parameters(), lr=config["lr"],
+                            weight_decay=config["weight_decay"])
+    scheduler = optim.lr_scheduler.OneCycleLR(
+        optimizer, max_lr=config["lr"],
+        steps_per_epoch=len(train_loader),
+        epochs=config["epochs"], pct_start=0.3
+    )
+    criterion = nn.CrossEntropyLoss(label_smoothing=0.1)
+    scaler = GradScaler()
+
+    # Training loop
+    best_val_acc = 0.0
+    patience_counter = 0
+    history = {"train_loss": [], "val_loss": [], "train_acc": [], "val_acc": []}
+
+    for epoch in range(1, config["epochs"] + 1):
+        t0 = time.time()
+        train_loss, train_acc = train_epoch(model, train_loader, optimizer,
+                                             criterion, scaler, device)
+        val_loss, val_acc = eval_epoch(model, val_loader, criterion, device)
+        scheduler.step()
+
+        history["train_loss"].append(train_loss)
+        history["val_loss"].append(val_loss)
+        history["train_acc"].append(train_acc)
+        history["val_acc"].append(val_acc)
+
+        elapsed = time.time() - t0
+        print(f"Epoch {epoch:3d}/{config['epochs']} | "
+              f"Train Loss: {train_loss:.4f} Acc: {train_acc:.4f} | "
+              f"Val Loss: {val_loss:.4f} Acc: {val_acc:.4f} | "
+              f"LR: {scheduler.get_last_lr()[0]:.2e} | {elapsed:.1f}s")
+
+        # Checkpoint
+        if val_acc > best_val_acc:
+            best_val_acc = val_acc
+            torch.save({"epoch": epoch, "model": model.state_dict(),
+                        "optimizer": optimizer.state_dict(),
+                        "val_acc": val_acc}, "best_model.pt")
+            patience_counter = 0
+        else:
+            patience_counter += 1
+
+        # Early stopping
+        if patience_counter >= config["patience"]:
+            print(f"Early stopping at epoch {epoch} (best val acc: {best_val_acc:.4f})")
+            break
+
+    return history, best_val_acc
+
+
+config = {
+    "epochs": 50,
+    "batch_size": 256,
+    "lr": 3e-4,
+    "weight_decay": 1e-4,
+    "patience": 10,
+}
+
+# Uncomment to run:
+# history, best_acc = train(config)
+# print(f"\nBest validation accuracy: {best_acc:.4f}")
 ```
-
-**Pros**: 
-- Production-ready
-- Excellent documentation
-- Strong ecosystem
-- TensorBoard visualization
-
-### PyTorch
-
-```bash
-pip install torch torchvision
-```
-
-**Pros**:
-- Dynamic computation graphs
-- Pythonic API
-- Great for research
-- Strong community
-
-### JAX
-
-```bash
-pip install jax jaxlib
-```
-
-**Pros**:
-- NumPy-like API
-- Automatic differentiation
-- GPU/TPU acceleration
-- Functional programming style
 
 ---
 
-## Best Practices
+## Common Pitfalls and Debugging
 
-1. **Start Simple**: Begin with basic architectures
-2. **Use Pre-trained Models**: Leverage transfer learning
-3. **Monitor Training**: Use callbacks and TensorBoard
-4. **Regularize**: Prevent overfitting with dropout, L2, etc.
-5. **Normalize Data**: Always normalize inputs
-6. **Batch Normalization**: Use in hidden layers
-7. **Learning Rate**: Use learning rate scheduling
-8. **Early Stopping**: Prevent overfitting
-9. **Hyperparameter Tuning**: Systematically search space
-10. **Version Control**: Track experiments and models
+| Pitfall | Symptom | Fix |
+|---------|---------|-----|
+| **Forgetting `model.train()` / `model.eval()`** | Dropout/Batchnorm behave wrong at test | Call `eval()` before inference; `train()` before training |
+| **Using `inplace=True` with checkpointing** | Errors or wrong gradients | Avoid inplace ops in checkpointed regions |
+| **Wrong batch axis** | NaNs or weird loss | Ensure batch dim is 0; use `batch_first=True` in LSTM/Transformer |
+| **No gradient clipping in RNNs** | Exploding gradients | `clip_grad_norm_(params, 1.0)` after backward |
+| **Learning rate too high** | Loss spikes, NaNs | Use warmup; try 1e-4 for fine-tuning, 1e-3 for scratch |
+| **Data not on same device as model** | RuntimeError device mismatch | `.to(device)` for both model and batch |
+| **Shuffling validation/test set** | Misleading metrics | Don't shuffle val/test; use fixed seed for reproducibility |
+| **BatchNorm with batch size 1** | Unstable training | Use LayerNorm or GroupNorm; or larger batch |
+| **Mixed precision without GradScaler (FP16)** | Loss = NaN | Use `GradScaler` with FP16; or switch to BF16 |
+| **Leaving `requires_grad=True` on frozen params** | Wasted compute, accidental updates | `param.requires_grad = False` for frozen layers |
+
+**Debugging tips**: Log gradient norms; use `torch.autograd.detect_anomaly()` to find NaNs; profile with `torch.profiler`; check data shapes with `print(x.shape)` in the first batch.
+
+---
+
+## Summary Table
+
+| Concept | Key Formula | Use Case |
+|---|---|---|
+| Forward pass | \( h^{(l)} = \sigma(W^{(l)}h^{(l-1)} + b^{(l)}) \) | All networks |
+| Backprop | \( \delta^{(l)} = (W^{(l+1)\top}\delta^{(l+1)}) \odot \sigma'(a^{(l)}) \) | Training |
+| Xavier init | \( \text{std} = \sqrt{2/(n_{in}+n_{out})} \) | tanh/sigmoid |
+| He init | \( \text{std} = \sqrt{2/n_{in}} \) | ReLU |
+| Batch Norm | Normalize over batch, learn γ, β | CNNs |
+| Layer Norm | Normalize over features, learn γ, β | Transformers/RNN |
+| Residual | \( H(x) = F(x) + x \) | ResNets, Transformers |
+| LSTM cell update | \( c_t = f_t \odot c_{t-1} + i_t \odot \tilde{c}_t \) | Sequences |
+| Attention | \( \text{softmax}(QK^\top/\sqrt{d_k})V \) | Transformers |
+| Dropout | zero activations with prob \( p \), scale by \( 1/(1-p) \) | Regularization |
 
 ---
 
 ## Resources
 
-- **Deep Learning Book**: deeplearningbook.org
-- **Fast.ai**: fast.ai
-- **TensorFlow Tutorials**: tensorflow.org/tutorials
-- **PyTorch Tutorials**: pytorch.org/tutorials
+- **Deep Learning Book** (Goodfellow, Bengio, Courville): deeplearningbook.org
+- **Dive into Deep Learning**: d2l.ai
+- **fast.ai Practical Deep Learning**: fast.ai
+- **Stanford CS231n** (CNNs): cs231n.stanford.edu
+- **Stanford CS224n** (NLP): cs224n.stanford.edu
 - **Papers with Code**: paperswithcode.com
-
----
-
-## Conclusion
-
-Deep Learning enables solving complex problems that traditional ML cannot handle. Key takeaways:
-
-1. **Understand Fundamentals**: Neural networks, backpropagation, optimization
-2. **Choose Right Architecture**: Match problem to architecture type
-3. **Regularize**: Prevent overfitting is crucial
-4. **Use Transfer Learning**: Leverage pre-trained models
-5. **Experiment**: Deep learning requires experimentation
-
-Remember: Deep learning is powerful but requires data, computation, and careful tuning!
-
+- **The Annotated Transformer**: nlp.seas.harvard.edu
+- **PyTorch Mixed Precision**: pytorch.org/docs/stable/amp.html
+- **Gradient Accumulation**: Simulate larger batches when memory-limited

@@ -5,17 +5,19 @@
 2. [Information and Entropy](#information-and-entropy)
 3. [Joint and Conditional Entropy](#joint-and-conditional-entropy)
 4. [Mutual Information](#mutual-information)
-5. [Kullback-Leibler Divergence](#kullback-leibler-divergence)
-6. [Cross-Entropy](#cross-entropy)
-7. [Maximum Entropy Principle](#maximum-entropy-principle)
-8. [Applications in ML/DL](#applications-in-mldl)
-9. [Practical Examples](#practical-examples)
+5. [Rate-Distortion Theory](#rate-distortion-theory)
+6. [Kullback-Leibler Divergence](#kullback-leibler-divergence)
+7. [Cross-Entropy](#cross-entropy)
+8. [Maximum Entropy Principle](#maximum-entropy-principle)
+9. [Applications in ML/DL](#applications-in-mldl)
+10. [Pitfalls and Numerical Considerations](#pitfalls-and-numerical-considerations)
+11. [Practical Examples](#practical-examples)
 
 ---
 
 ## Introduction
 
-Information theory provides a mathematical framework for quantifying information, uncertainty, and communication. It's fundamental to machine learning and deep learning, especially for:
+Information theory, founded by Claude Shannon (1948), provides a mathematical framework for quantifying **information**, **uncertainty**, and **communication**. It's fundamental to machine learning and deep learning, especially for:
 - **Loss Functions**: Cross-entropy loss for classification
 - **Regularization**: KL divergence for Bayesian methods
 - **Feature Selection**: Mutual information for feature importance
@@ -23,10 +25,11 @@ Information theory provides a mathematical framework for quantifying information
 - **Uncertainty Quantification**: Entropy-based measures
 
 ### Key Concepts
-- **Entropy**: Measure of uncertainty/information
-- **Mutual Information**: Dependence between variables
-- **KL Divergence**: Difference between distributions
-- **Cross-Entropy**: Expected code length
+- **Entropy** H(X): Measure of uncertainty; average bits needed to describe X
+- **Mutual Information** I(X;Y): Shared information; reduction in uncertainty of X given Y
+- **KL Divergence** D_KL(P‖Q): "Distance" between distributions (asymmetric, not a metric)
+- **Cross-Entropy** H(P,Q): Expected code length when using Q to encode P
+- **Rate-Distortion**: Trade-off between compression rate and reconstruction error
 
 ---
 
@@ -261,6 +264,73 @@ I_XY = mutual_information(joint_partial)
 print(f"I(X; Y) = {I_XY:.4f}")
 print(f"min(H(X), H(Y)) = {min(H_X, H_Y):.4f}")
 print(f"I(X; Y) ≤ min(H(X), H(Y)): {I_XY <= min(H_X, H_Y)}")
+```
+
+### Mutual Information for Continuous Variables
+
+For continuous X, Y, MI requires density estimation. Common estimators:
+- **k-NN estimator** (Kraskov et al.): Uses k-nearest neighbor distances; avoids explicit density estimation
+- **Kernel density estimation**: Estimate p(x,y), p(x), p(y) then integrate
+- **Binning/discretization**: Simple but loses information; bin choice matters
+
+```python
+from sklearn.feature_selection import mutual_info_regression, mutual_info_classif
+
+# scikit-learn's MI (uses k-NN style estimation)
+X = np.random.randn(1000, 5)
+y = X[:, 0] ** 2 + 0.1 * np.random.randn(1000)  # y depends on X[:, 0]
+
+# Regression: continuous target
+mi_scores = mutual_info_regression(X, y, random_state=42)
+print("MI with target:", mi_scores)
+# X[:, 0] should have highest MI
+
+# Classification: discrete target
+y_class = (y > 0).astype(int)
+mi_class = mutual_info_classif(X, y_class, random_state=42)
+print("MI (classification):", mi_class)
+```
+
+### Conditional Mutual Information
+
+I(X; Y | Z) = H(X|Z) - H(X|Y,Z) — information X provides about Y given Z. Used in **causal discovery** and **feature selection** (e.g., redundant features given Z).
+
+---
+
+## Rate-Distortion Theory
+
+Rate-distortion theory formalizes the **compression–quality trade-off**. Given a source X and distortion measure d(x, x̂), the **rate-distortion function** R(D) is the minimum rate (bits/symbol) needed to achieve expected distortion ≤ D.
+
+**Key result**: R(D) = min_{p(x̂|x): E[d(X,X̂)]≤D} I(X; X̂)
+
+Applications in ML:
+- **Variational autoencoders**: Latent bottleneck minimizes I(X; Z) subject to reconstruction quality
+- **Information bottleneck**: Compress input X to representation Z that preserves information about Y
+- **Neural compression**: Learn encoders/decoders that achieve low distortion at given rate
+
+```python
+def rate_distortion_tradeoff():
+    """
+    Conceptual: For Gaussian source, R(D) = 0.5 * log2(sigma²/D) for D < sigma².
+    Visualize rate-distortion curve for scalar Gaussian.
+    """
+    sigma_sq = 1.0
+    D_values = np.linspace(0.01, sigma_sq, 100)
+    R_values = np.maximum(0, 0.5 * np.log2(sigma_sq / D_values))
+    
+    import matplotlib.pyplot as plt
+    plt.figure(figsize=(8, 5))
+    plt.plot(R_values, D_values)
+    plt.xlabel('Rate R (bits)')
+    plt.ylabel('Distortion D')
+    plt.title('Rate-Distortion Curve: Gaussian Source')
+    plt.grid(True)
+    plt.show()
+
+rate_distortion_tradeoff()
+
+# Information bottleneck in practice: VAE's beta controls rate vs distortion
+# L = E[||x - decode(z)||²] + beta * D_KL(q(z|x) || p(z))
 ```
 
 ---
@@ -579,6 +649,22 @@ print(f"Lower entropy = more confident: {ent_confident[0] < ent_uncertain[0]}")
 
 ---
 
+## Pitfalls and Numerical Considerations
+
+| Pitfall | Description | Mitigation |
+|---------|-------------|------------|
+| **log(0)** | Undefined; leads to -inf or NaNs | Add epsilon: `log(p + 1e-10)`; clip probabilities |
+| **Small sample MI** | MI estimators biased with few samples | Use more samples; k-NN with larger k; consider permutation tests |
+| **Binning for MI** | Discretization loses information; bin boundaries matter | Use k-NN or kernel estimators; try multiple bin counts |
+| **KL asymmetry** | D_KL(P‖Q) ≠ D_KL(Q‖P); wrong direction can break models | Use correct direction: e.g., VAE uses D_KL(q‖p) for valid ELBO |
+| **Numerical overflow** | exp(logvar) can overflow in VAE KL term | Use stable formula: -0.5 * sum(1 + logvar - mu² - exp(logvar)) |
+| **Units** | Bits vs nats: log₂ vs ln | Be consistent; scipy uses natural log (nats) by default |
+| **Conditional MI** | I(X;Y|Z) can be tricky to estimate | Use specialized packages (e.g., idtxl, PyInform) |
+
+**Benchmarks**: No single "information theory benchmark"; applied in feature selection (NIPS 2003 challenge), causal discovery (benchmark data), and model comparison (likelihood, bits per dimension).
+
+---
+
 ## Practical Examples
 
 ### Example 1: Information Gain for Decision Trees
@@ -661,11 +747,24 @@ print(f"Variational loss: {loss:.4f}")
 
 ## Additional Resources
 
-- **Elements of Information Theory (Cover & Thomas)**: Comprehensive textbook
-- **Information Theory, Inference, and Learning Algorithms (MacKay)**: ML perspective
-- **Deep Learning Book (Goodfellow)**: Information theory in DL context
+**Textbooks**:
+- **Elements of Information Theory** (Cover & Thomas, 2nd ed.): Comprehensive reference
+- **Information Theory, Inference, and Learning Algorithms** (MacKay): ML perspective, free online
+- **Deep Learning Book** (Goodfellow et al.): Ch. 3 on information theory in DL
+
+**Papers**:
+- Shannon (1948) — A Mathematical Theory of Communication
+- Kraskov et al. (2004) — Estimating mutual information (k-NN)
+- Tishby & Zaslavsky (2015) — Information bottleneck in deep learning
+- Alemi et al. (2016) — Deep variational information bottleneck
 
 ---
 
 **Master information theory to understand uncertainty and information in ML/DL!**
+
+### Summary of Enhancements
+
+- **Deeper mutual information**: Continuous MI, k-NN estimators, conditional MI, sklearn usage
+- **Rate-distortion theory**: R(D) function, Gaussian example, VAE/compression connections
+- **Pitfalls**: log(0), sample bias, binning, KL asymmetry, numerical stability, units
 

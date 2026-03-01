@@ -5,18 +5,22 @@
 2. [Contrastive Learning](#contrastive-learning)
 3. [SimCLR](#simclr)
 4. [MoCo (Momentum Contrast)](#moco-momentum-contrast)
-5. [BYOL and DINO](#byol-and-dino)
-6. [Masked Autoencoders (MAE)](#masked-autoencoders-mae)
-7. [Self-Supervised NLP (BERT, etc.)](#self-supervised-nlp-bert-etc)
-8. [Practical Examples](#practical-examples)
-9. [Advanced Topics](#advanced-topics)
-10. [Best Practices](#best-practices)
+5. [BYOL, SimSiam, and Barlow Twins](#byol-simsiam-and-barlow-twins)
+6. [DINO](#dino)
+7. [Masked Autoencoders (MAE)](#masked-autoencoders-mae)
+8. [Self-Supervised NLP (BERT, etc.)](#self-supervised-nlp-bert-etc)
+9. [Practical Examples](#practical-examples)
+10. [Advanced Topics](#advanced-topics)
+11. [Best Practices](#best-practices)
+12. [Common Pitfalls and Troubleshooting](#common-pitfalls-and-troubleshooting)
+13. [Performance Benchmarks](#performance-benchmarks)
+14. [Further Reading and References](#further-reading-and-references)
 
 ---
 
 ## Introduction to Self-Supervised Learning
 
-**Self-supervised learning (SSL)** learns representations from unlabeled data by defining a pretext task where the target is derived from the input itself. No human labels required—the "supervision" comes from the data structure.
+**Self-supervised learning (SSL)** learns representations from unlabeled data by defining a **pretext task** where the target is derived from the input itself. No human labels are required—the "supervision" comes from the structure of the data (e.g., two augmented views of the same image should have similar representations). Real-world analogy: children learn visual concepts before they can name them; SSL mimics this by exploiting structure (spatial, temporal, causal) inherent in data.
 
 ### Why Self-Supervised?
 
@@ -50,21 +54,22 @@ Unlabeled Data → Pretext Task → Encoder → Representations
 
 ## Contrastive Learning
 
-**Key idea**: Pull positive pairs together, push negative pairs apart in representation space.
+**Key idea**: Pull **positive pairs** (different views of same sample) together in representation space, push **negative pairs** (different samples) apart. The loss encourages the model to be invariant to augmentations while remaining discriminative across samples.
 
 ### Positive and Negative Pairs
 
-- **Positives**: Different views of same sample (augmentations)
-- **Negatives**: Different samples (or other views)
+- **Positives**: Different augmentations of the same sample (e.g., cropped, color-jittered views of one image)
+- **Negatives**: Other samples in the batch, or a queue/memory bank of past samples
 
 ### InfoNCE (Noise Contrastive Estimation) Loss
 
-L = -log( exp(sim(q, k+)/τ) / Σ_i exp(sim(q, k_i)/τ) )
+For query \(q\) and positive key \(k^+\), with negatives \(\{k_i\}\):
 
-- q: query (anchor)
-- k+: positive key
-- k_i: all keys (including negatives)
-- τ: temperature
+\[
+\mathcal{L}_{\text{InfoNCE}} = -\log \frac{\exp(\text{sim}(q, k^+)/\tau)}{\sum_i \exp(\text{sim}(q, k_i)/\tau)}
+\]
+
+where \(\text{sim}(a,b) = a^\top b / (\|a\| \|b\|)\) (cosine similarity) and \(\tau\) is the **temperature**. Lower \(\tau\) sharpens the distribution (harder negatives matter more). This is a form of NCE that maximizes a lower bound on mutual information \(I(q; k^+)\).
 
 ```python
 import torch
@@ -173,9 +178,11 @@ def simclr_loss(z1, z2, temperature=0.5):
 
 ### Momentum Update
 
-θ_k = m * θ_k + (1 - m) * θ_q
+\[
+\theta_k \leftarrow m \cdot \theta_k + (1 - m) \cdot \theta_q
+\]
 
-Typically m = 0.999.
+Typically \(m = 0.999\). The key encoder changes slowly, providing stable targets for the query branch. The queue stores keys from many past batches, yielding thousands of negatives without a large batch.
 
 ### MoCo v2 / v3
 
@@ -183,6 +190,8 @@ Typically m = 0.999.
 - v3: ViT backbone, no queue (simpler)
 
 ```python
+import copy
+
 class MoCo(nn.Module):
     def __init__(self, encoder, dim=128, K=65536, m=0.999):
         super().__init__()
@@ -193,6 +202,7 @@ class MoCo(nn.Module):
         for p in self.encoder_k.parameters():
             p.requires_grad = False
         
+        encoder_dim = 2048  # ResNet-50; adjust for your encoder
         self.proj_q = nn.Linear(encoder_dim, dim)
         self.proj_k = nn.Linear(encoder_dim, dim)
         self.register_buffer("queue", torch.randn(dim, K))
@@ -230,27 +240,89 @@ class MoCo(nn.Module):
 
 ---
 
-## BYOL and DINO
+## BYOL, SimSiam, and Barlow Twins
+
+These methods achieve strong results **without explicit negatives**, avoiding the need for large batches or queues.
 
 ### BYOL (Bootstrap Your Own Latent)
 
-- No negatives; uses predictor + momentum target
-- Predictor: predict target from online
-- Target: momentum encoder
-- Loss: MSE between predicted and target
+**BYOL** (Grill et al., 2020) uses two branches: **online** (updated by gradient) and **target** (momentum update of online). The online branch has a **predictor** \(h\) that predicts the target representation from the online representation. Loss: MSE between predicted and target.
 
-### DINO (Self-Distillation with No Labels)
+\[
+\mathcal{L} = \|h(z_\text{online}) - z_\text{target}\|^2
+\]
 
-- Teacher and student with same architecture
-- Teacher: EMA of student
-- Cross-entropy between student and teacher softmax outputs
-- Centering for teacher to avoid collapse
+**Why it doesn't collapse**: The target is a slowly moving average; the predictor must work for many different inputs, preventing trivial solutions. Symmetric loss (swap online/target views) is often used.
 
 ```python
-# DINO: Knowledge distillation without labels
-# Teacher softmax is target for student
-# Avoids collapse via centering and sharpening
+# BYOL: no negatives, predictor + momentum target
+def byol_loss(z_online, z_target, predictor):
+    pred = predictor(z_online)
+    pred = F.normalize(pred, dim=1)
+    z_target = F.normalize(z_target, dim=1)
+    return 2 - 2 * (pred * z_target).sum(dim=1).mean()  # MSE of normalized
 ```
+
+### SimSiam
+
+**SimSiam** (Chen & He, 2021) simplifies BYOL: **no momentum encoder, no negatives**. Same architecture for both views; a **predictor** on one side predicts the other. Stop-gradient on the target branch prevents collapse.
+
+\[
+\mathcal{L} = -\frac{1}{2}\big( \langle h(z_1), \text{sg}(z_2) \rangle + \langle h(z_2), \text{sg}(z_1) \rangle \big)
+\]
+
+where \(\text{sg}\) = stop-gradient. Collapse is avoided by stop-gradient (the predictor cannot force both to a constant) and the asymmetry of the predictor.
+
+```python
+def simsiam_loss(z1, z2, predictor, temperature=0.5):
+    """SimSiam: stop-gradient prevents collapse."""
+    p1, p2 = predictor(z1), predictor(z2)
+    p1, p2 = F.normalize(p1, dim=1), F.normalize(p2, dim=1)
+    z1, z2 = F.normalize(z1, dim=1).detach(), F.normalize(z2, dim=1).detach()
+    return -(p1 * z2).sum(dim=1).mean() - (p2 * z1).sum(dim=1).mean()
+```
+
+### Barlow Twins
+
+**Barlow Twins** (Zbontar et al., 2021) decorrelates the dimensions of the representations. Let \(Z^a, Z^b \in \mathbb{R}^{B \times D}\) be embeddings of two views. Compute the **cross-correlation matrix** \(C \in \mathbb{R}^{D \times D}\):
+
+\[
+C_{ij} = \frac{\sum_b z_{b,i}^a z_{b,j}^b}{\sqrt{\sum_b (z_{b,i}^a)^2} \sqrt{\sum_b (z_{b,j}^b)^2}}
+\]
+
+**Loss**: Make \(C\) close to the identity—diagonal elements 1 (invariance), off-diagonal 0 (redundancy reduction).
+
+\[
+\mathcal{L} = \sum_i (1 - C_{ii})^2 + \lambda \sum_{i \neq j} C_{ij}^2
+\]
+
+No negatives, no queue, no momentum. Very simple and effective.
+
+```python
+def barlow_twins_loss(z1, z2, lambd=5e-3):
+    """Barlow Twins: cross-correlation matrix → identity."""
+    B, D = z1.shape
+    z1 = (z1 - z1.mean(0)) / (z1.std(0) + 1e-8)
+    z2 = (z2 - z2.mean(0)) / (z2.std(0) + 1e-8)
+    C = (z1.T @ z2) / B  # [D, D]
+    on_diag = ((1 - torch.diag(C)) ** 2).sum()
+    off_diag = ((C * (1 - torch.eye(D, device=C.device))) ** 2).sum()
+    return on_diag + lambd * off_diag
+```
+
+---
+
+## DINO
+
+**DINO** (Self-Distillation with No Labels, Caron et al., 2021) uses **knowledge distillation** without labels: teacher and student share the same architecture; teacher is EMA of student. Loss: cross-entropy between student and teacher softmax outputs over a vocabulary of *cluster centers* (in practice, the model's own output dimensions).
+
+**Centering**: Teacher outputs are centered (running mean subtracted) to avoid collapse to a single mode. **Sharpening**: Low temperature on teacher, higher on student.
+
+\[
+\mathcal{L} = - \sum_i P_t(x_i) \log P_s(x_i)
+\]
+
+where \(P_t\) = teacher softmax (centered, sharp), \(P_s\) = student softmax.
 
 ---
 
@@ -269,7 +341,7 @@ class MoCo(nn.Module):
 
 ### Why 75% Masking?
 
-High masking ratio forces semantic understanding; cannot copy neighbors.
+High masking ratio (75%) forces **semantic understanding**—the model cannot simply copy neighboring patches; it must infer content from context. Lower ratios (e.g., 50%) allow more "easy" copying and weaker representations. MAE encoder sees only visible patches (no mask tokens), reducing compute.
 
 ### MAE Implementation Sketch
 
@@ -412,30 +484,58 @@ optimizer = torch.optim.AdamW(model.parameters(), lr=1e-4, weight_decay=0.05)
 
 ### Clustering-Based: SwAV
 
-- Soft clustering with prototypes
-- Swap assignment: predict cluster of view from the other view
-- No pairwise negatives needed
+**SwAV** (Caron et al., 2020): Soft clustering with **prototypes** (learnable cluster centroids). For two views, assign each to prototypes; **swap** the assignments—predict the cluster assignment of view 2 from the representation of view 1, and vice versa. No pairwise negatives; scales with number of prototypes (e.g., 3K).
 
 ### Data2Vec
 
-- Unified framework for vision, speech, NLP
-- Predict contextualized target from masked input
+**Data2Vec** (Baevski et al., 2022): Unified framework for vision, speech, NLP. **Teacher** builds contextualized target from full input; **student** sees masked input and predicts teacher representation. One algorithm across modalities.
 
 ### V-JEPA (Yann LeCun)
 
-- Joint embedding predictive architecture
-- Predict in representation space, not pixel space
+**V-JEPA**: Joint embedding predictive architecture. Predict in **representation space** (not pixel space)—predict masked patch representations from context. Aligns with LeCun's "world model" perspective for SSL.
 
 ---
 
 ## Best Practices
 
-1. **Augmentations matter**: Strong but realistic augmentations for contrastive
-2. **Batch size**: Larger is better for SimCLR; MoCo uses queue to simulate
-3. **Temperature**: 0.07–0.1 common; lower = sharper
-4. **Projection head**: Use for contrastive; drop for downstream
+1. **Augmentations matter**: Strong but realistic augmentations for contrastive (SimCLR-style: crop, color, blur)
+2. **Batch size**: Larger is better for SimCLR (4K+); MoCo/SimSiam/Barlow avoid this need
+3. **Temperature**: 0.07–0.1 common; lower = sharper, harder negatives
+4. **Projection head**: Use for contrastive; drop for downstream (use encoder output)
 5. **Evaluation**: Linear probe on frozen features + full fine-tuning
-6. **Pretrain long**: SSL benefits from many epochs
+6. **Pretrain long**: SSL benefits from many epochs (300–800 for ImageNet)
+
+---
+
+## Common Pitfalls and Troubleshooting
+
+| Pitfall | Symptom | Fix |
+|---------|---------|-----|
+| **SimCLR collapse** | All embeddings similar, loss → 0 | Increase batch size; lower temperature |
+| **SimSiam/BYOL collapse** | Embeddings constant | Ensure stop-gradient; check predictor |
+| **Low linear probe** | Representations not discriminative | Stronger aug; train longer; try MoCo/MAE |
+| **MAE poor on small data** | Overfitting | Reduce model size; fewer epochs |
+| **Temperature too high** | Weak contrastive signal | Lower τ (e.g., 0.05–0.07) |
+| **Augmentations too weak** | Trivial invariance | Add color jitter, blur, stronger crop |
+| **OOM on SimCLR** | Large batch doesn't fit | Use MoCo, SimSiam, or gradient accumulation |
+
+---
+
+## Performance Benchmarks
+
+Linear probe accuracy on ImageNet (Top-1, 224×224, ~100 epochs):
+
+| Method | ResNet-50 | ViT-Base |
+|--------|-----------|----------|
+| **Supervised** | 76.5% | 79.0% |
+| **SimCLR v2** | 69.3% | - |
+| **MoCo v3** | - | 72.8% |
+| **SimSiam** | 69.8% | - |
+| **Barlow Twins** | 69.7% | - |
+| **MAE** | - | 68.0% |
+| **DINO** | 75.3% | 77.4% |
+
+*Approximate; full fine-tuning often closes the gap. DINO excels for ViT.*
 
 ---
 
@@ -445,8 +545,29 @@ optimizer = torch.optim.AdamW(model.parameters(), lr=1e-4, weight_decay=0.05)
 |--------|----------|----------|
 | SimCLR | Contrastive, in-batch negatives | Vision, large batch |
 | MoCo | Queue + momentum encoder | Vision, small batch |
+| BYOL | Predictor + momentum target, no neg | Vision, stable |
+| SimSiam | Stop-gradient predictor, no neg | Vision, simple |
+| Barlow Twins | Cross-corr → identity | Vision, simple |
 | MAE | Mask and reconstruct pixels | Vision, ViT |
 | DINO | Self-distillation, no labels | Vision, ViT |
 | BERT | Masked language model | NLP |
 
 **When to use**: When you have lots of unlabeled data and want strong representations for downstream tasks.
+
+---
+
+## Further Reading and References
+
+### Foundational Papers
+
+- Chen et al. (2020). *A Simple Framework for Contrastive Learning of Visual Representations* (SimCLR). ICML.
+- He et al. (2020). *Momentum Contrast for Unsupervised Visual Representation Learning* (MoCo). CVPR.
+- Grill et al. (2020). *Bootstrap Your Own Latent* (BYOL). NeurIPS.
+- Chen & He (2021). *Exploring Simple Siamese Representation Learning* (SimSiam). CVPR.
+- Zbontar et al. (2021). *Barlow Twins: Self-Supervised Learning via Redundancy Reduction*. ICML.
+- Caron et al. (2021). *Emerging Properties in Self-Supervised Vision Transformers* (DINO). ICCV.
+- He et al. (2022). *Masked Autoencoders Are Scalable Vision Learners* (MAE). CVPR.
+
+### Surveys
+
+- Liu et al. (2021). *Self-Supervised Learning: Generative or Contrastive*. IEEE TKDE.

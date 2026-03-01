@@ -5,12 +5,16 @@
 2. [Search Space Design](#search-space-design)
 3. [Search Strategies](#search-strategies)
 4. [DARTS: Differentiable Architecture Search](#darts-differentiable-architecture-search)
-5. [ENAS and Weight Sharing](#enas-and-weight-sharing)
-6. [EfficientNet and Compound Scaling](#efficientnet-and-compound-scaling)
-7. [NAS for Transformers](#nas-for-transformers)
-8. [AutoML and HPO vs NAS](#automl-and-hpo-vs-nas)
-9. [Practical Examples](#practical-examples)
-10. [Best Practices](#best-practices)
+5. [PC-DARTS and NAS-Bench](#pc-darts-and-nas-bench)
+6. [ENAS and Weight Sharing](#enas-and-weight-sharing)
+7. [EfficientNet and Compound Scaling](#efficientnet-and-compound-scaling)
+8. [NAS for Transformers](#nas-for-transformers)
+9. [AutoML and HPO vs NAS](#automl-and-hpo-vs-nas)
+10. [Practical Examples](#practical-examples)
+11. [Best Practices](#best-practices)
+12. [Common Pitfalls and Troubleshooting](#common-pitfalls-and-troubleshooting)
+13. [Performance Benchmarks](#performance-benchmarks)
+14. [Further Reading and References](#further-reading-and-references)
 
 ---
 
@@ -40,34 +44,21 @@ Training each candidate is expensive. Key insight: **weight sharing** (one super
 
 ### Cell-Based Search (NASNet, DARTS)
 
-Search for a **cell** (repeated block); stack cells to form full network.
+Search for a **cell** (repeated block); stack cells to form the full network. A cell is a directed acyclic graph (DAG): nodes are feature maps, edges are operations. Node \(i\) aggregates outputs from nodes \(j < i\). The cell is repeated (with possible stride) to build the full net.
 
-```python
-# Cell: Directed graph of nodes (feature maps) and edges (operations)
-# Node i = aggregation of outputs from nodes j < i
-# Edge (i, j): apply one of {conv 3x3, conv 5x5, sep_conv, max_pool, ...}
+**Operations** (per edge): `none`, `skip_connect`, `conv_3x3`, `conv_5x5`, `sep_conv_3x3`, `sep_conv_5x5`, `dil_conv_3x3`, `dil_conv_5x5`, `max_pool_3x3`, `avg_pool_3x3`
 
-OPS = [
-    'none',
-    'skip_connect',
-    'conv_3x3',
-    'conv_5x5',
-    'sep_conv_3x3',
-    'sep_conv_5x5',
-    'dil_conv_3x3',
-    'dil_conv_5x5',
-    'max_pool_3x3',
-    'avg_pool_3x3'
-]
-```
+**Search space size**: For \(N\) edges and \(K\) ops per edge: \(K^N\) architectures (e.g., \(8^{14} \approx 4 \times 10^{12}\) for DARTS).
 
 ### Macro Search
 
-Search full architecture: number of layers, filter sizes, etc. Larger space, harder search.
+Search full architecture: number of layers, filter sizes, kernel sizes. Larger space, harder search—often combined with evolution or RL.
 
-### Hierarchical Search (NAS-Bench-301)
+### Hierarchical Search (NAS-Bench-101/201/301)
 
-Search at multiple levels: outer (blocks), inner (cells).
+- **NAS-Bench-101**: Small cell space; full training results precomputed → instant lookup
+- **NAS-Bench-201**: CIFAR-100; 15,625 architectures; used for predictor/weight-sharing research
+- **NAS-Bench-301**: NAS-Bench-201 extended via learned surrogate (e.g., DARTS); scales to larger spaces
 
 ---
 
@@ -75,50 +66,64 @@ Search at multiple levels: outer (blocks), inner (cells).
 
 ### 1. Random Search
 
-Baseline: sample architectures, train, pick best.
+Baseline: sample architectures from \(\mathcal{A}\), train each, pick best. Surprisingly strong for moderate search spaces; serves as lower bound.
 
 ### 2. Reinforcement Learning (NAS-Net, ENAS)
 
-- **Controller RNN**: Outputs architecture as sequence
-- **Reward**: Validation accuracy
-- **Policy gradient** to update controller
+- **Controller**: RNN outputs architecture as a sequence (e.g., op per edge)
+- **Reward**: \(R = \text{val\_accuracy}\) (or validation loss)
+- **Policy gradient** (REINFORCE): \(\nabla_\phi \mathbb{E}_{a \sim \pi_\phi}[R(a)] \approx R(a) \nabla_\phi \log \pi_\phi(a)\)
+- **Credit assignment**: Reward shaping (e.g., early stopping reward) improves sample efficiency
 
-### 3. Evolution (AmoebaNet)
+### 3. Evolution (AmoebaNet, Regularized Evolution)
 
-- Population of architectures
-- Mutate/crossover, select by fitness
-- Train offspring, replace worst
+- Population of \(P\) architectures; fitness = validation accuracy
+- **Mutate**: Change one op or connection
+- **Crossover**: Combine two parents (e.g., mix cells)
+- **Selection**: Keep top-k; replace worst with offspring
+- Regularized evolution: age regularization favors younger architectures to avoid local optima
 
 ### 4. Bayesian Optimization
 
-- Surrogate model (GP, neural predictor)
-- Acquire next architecture via acquisition function (EI, UCB)
+- **Surrogate**: GP or neural predictor \(f(a) \approx R(a)\) trained on \((a_i, R_i)\)
+- **Acquisition**: EI (Expected Improvement), UCB; trade off exploration vs exploitation
+- **Limitation**: Doesn't scale to very large discrete spaces without embeddings
 
 ### 5. Differentiable (DARTS)
 
-- Relax architecture to continuous
-- Optimize with gradient descent
-- Derive discrete architecture at end
+- **Relax**: \(o^{(i,j)}(x) = \sum_k \frac{\exp(\alpha_k)}{\sum_l \exp(\alpha_l)} o_k(x)\)—soft selection over ops
+- **Joint optimization**: \(\alpha\) (architecture) and \(w\) (weights) via bilevel or alternating updates
+- **Discretize**: At the end, pick \(o = \arg\max_k \alpha_k\) per edge
 
 ---
 
 ## DARTS: Differentiable Architecture Search
 
-**DARTS** (Liu et al., 2019) makes the architecture **differentiable** by mixing operations with softmax weights.
+**DARTS** (Liu et al., 2019) makes the architecture **differentiable** by replacing the discrete choice "pick one op" with a **soft mixture** of all ops, weighted by learned parameters \(\alpha\).
 
 ### Mixed Operation
 
-For each edge (i, j), instead of one op:
-ō^(i,j)(x) = Σ_k (exp(α_k) / Σ_l exp(α_l)) · o_k(x)
+For each edge \((i, j)\), instead of selecting a single operation \(o_k\), use:
 
-α_k are **architecture parameters** (learned).
+\[
+\bar{o}^{(i,j)}(x) = \sum_{k=1}^{K} \frac{\exp(\alpha_k^{(i,j)})}{\sum_{l=1}^{K} \exp(\alpha_l^{(i,j)})} \cdot o_k(x)
+\]
+
+where \(\alpha^{(i,j)} \in \mathbb{R}^K\) are **architecture parameters** (learned). At search end, discretize: \(o^* = \arg\max_k \alpha_k^{(i,j)}\).
 
 ### Bilevel Optimization
 
-- **Inner**: Train weights w (on train set)
-- **Outer**: Update α (on validation set)
+DARTS formulates a **bilevel** problem:
+- **Inner**: \(w^*(\alpha) = \arg\min_w \mathcal{L}_{\text{train}}(w, \alpha)\)
+- **Outer**: \(\min_\alpha \mathcal{L}_{\text{val}}(w^*(\alpha), \alpha)\)
 
-∇_α L_val(w*(α), α) ≈ ∇_α L_val(w - ξ∇_w L_train, α)
+Gradient w.r.t. \(\alpha\) requires \(\nabla_\alpha w^*\), which is expensive. **First-order approximation**:
+
+\[
+\nabla_\alpha \mathcal{L}_{\text{val}} \approx \nabla_\alpha \mathcal{L}_{\text{val}}(w - \xi \nabla_w \mathcal{L}_{\text{train}}, \alpha)
+\]
+
+i.e., assume \(w\) is one gradient step from \(w^*\); no second-order terms. **Second-order** uses implicit differentiation; more accurate but slower and sometimes unstable.
 
 ### DARTS Implementation Sketch
 
@@ -207,24 +212,35 @@ def discretize(alpha):
 
 ## EfficientNet and Compound Scaling
 
-**EfficientNet** uses NAS to find baseline, then **compound scaling**:
+**EfficientNet** (Tan & Le, 2019) first uses NAS to find a strong **baseline** (EfficientNet-B0), then applies **compound scaling** to scale depth, width, and resolution together.
 
-- **Depth** (d): More layers
-- **Width** (w): More channels
-- **Resolution** (r): Larger input
+### Scaling Dimensions
 
-Constrain: d^α · w^β · r^γ = 2 with α+β+γ=1.
+- **Depth** \(d\): More layers (e.g., more MBConv blocks)
+- **Width** \(w\): More channels per layer
+- **Resolution** \(r\): Larger input (e.g., 224 → 336)
+
+**Constraint**: \(d^\alpha \cdot w^\beta \cdot r^\gamma = 2\) with \(\alpha + \beta + \gamma = 1\). Grid search on small models found \(\alpha \approx 1.2\), \(\beta \approx 1.1\), \(\gamma \approx 1.15\).
 
 ### Scaling Formula
 
+\[
+d = d_0 \cdot \phi^\alpha, \quad w = w_0 \cdot \phi^\beta, \quad r = r_0 \cdot \phi^\gamma
+\]
+
+ where \(\phi\) is the compound coefficient (e.g., 1, 2, 3 for B0, B1, B2...).
+
 ```python
-def compound_scale(base_config, phi):
-    """phi = 0: baseline; phi=1,2,...: scaled"""
+def compound_scale(base_config: dict, phi: float) -> tuple[int, int, int]:
+    """
+    phi=0: baseline (B0); phi=1,2,3: B1, B2, B3...
+    EfficientNet-B0: depth=1.0, width=1.0, resolution=224
+    """
     alpha, beta, gamma = 1.2, 1.1, 1.15
-    d = base_config['depth'] * (alpha ** phi)
-    w = base_config['width'] * (beta ** phi)
-    r = base_config['resolution'] * (gamma ** phi)
-    return int(d), int(w), int(r)
+    d = int(base_config['depth'] * (alpha ** phi))
+    w = int(base_config['width'] * (beta ** phi))
+    r = int(base_config['resolution'] * (gamma ** phi))
+    return d, w, r
 ```
 
 ---
@@ -324,12 +340,39 @@ model = clf.export_model()
 
 ## Best Practices
 
-1. **Start small**: Search on subset of data
-2. **Use proxy**: Shorter training, smaller model for search
-3. **Weight sharing**: When possible (ENAS, DARTS)
-4. **Validate**: Retrain best arch from scratch
-5. **Hardware**: Consider latency, FLOPs in search objective
-6. **DARTS**: Watch for skip-connect collapse; use regularization
+1. **Start small**: Search on subset of data (e.g., CIFAR-10) or fewer epochs
+2. **Use proxy**: Shorter training (e.g., 50 epochs), smaller model; correlation with full training is often good
+3. **Weight sharing**: When possible (ENAS, DARTS)—dramatically reduces cost
+4. **Validate**: Retrain best architecture from scratch; search may overfit proxy
+5. **Hardware-aware**: Include latency, FLOPs, or energy in search objective (e.g., ProxylessNAS)
+6. **DARTS**: Watch for skip-connect collapse; use regularization (e.g., DropEdge) or PC-DARTS
+
+---
+
+## Common Pitfalls and Troubleshooting
+
+| Pitfall | Symptom | Fix |
+|---------|---------|-----|
+| **DARTS skip collapse** | Most \(\alpha\) mass on skip_connect | L2 on \(\alpha\); limit skip; use PC-DARTS |
+| **Search overfitting** | Good val acc during search, poor retrain | Early stopping; more data; regularize \(\alpha\) |
+| **Memory OOM** | Search fails on GPU | PC-DARTS; reduce batch size; gradient checkpointing |
+| **Unstable bilevel** | Loss spikes, NaN | Use first-order approx; smaller \(\xi\); warmup |
+| **Transfer gap** | CIFAR arch poor on ImageNet | Search on target dataset or larger proxy |
+| **Wrong metric** | Best arch has high latency | Add latency term to objective |
+
+---
+
+## Performance Benchmarks
+
+| Method | CIFAR-10 | ImageNet Top-1 | Search Cost (GPU-days) |
+|--------|----------|----------------|------------------------|
+| **DARTS (2nd)** | 97.2% | 73.3% | ~1 |
+| **PC-DARTS** | 97.4% | 74.0% | ~0.5 |
+| **EfficientNet-B0** | - | 77.1% | - |
+| **NASNet** | 97.4% | 74.0% | 2000 |
+| **ENAS** | 97.1% | - | 0.5 |
+
+*Approximate; see papers for exact setup.*
 
 ---
 
@@ -344,3 +387,25 @@ model = clf.export_model()
 | AutoKeras | Keras-integrated NAS | Medium |
 
 **Libraries**: `torch`, `nni`, `autokeras`, `optuna`
+
+---
+
+## Further Reading and References
+
+### Foundational Papers
+
+- Zoph & Le (2017). *Neural Architecture Search with Reinforcement Learning*. ICLR. [NAS-Net]
+- Pham et al. (2018). *Efficient Neural Architecture Search via Parameter Sharing*. ICML. [ENAS]
+- Liu et al. (2019). *DARTS: Differentiable Architecture Search*. ICLR.
+- Xu et al. (2020). *PC-DARTS: Partial Channel Connections for Memory-Efficient Architecture Search*. ICLR.
+- Tan & Le (2019). *EfficientNet: Rethinking Model Scaling for CNNs*. ICML.
+
+### NAS-Bench
+
+- Ying et al. (2019). *NAS-Bench-101*. ICLR.
+- Dong et al. (2020). *NAS-Bench-201*. ICLR.
+- Siems et al. (2020). *NAS-Bench-301*. NeurIPS.
+
+### Surveys
+
+- Elsken et al. (2019). *Neural Architecture Search: A Survey*. JMLR.

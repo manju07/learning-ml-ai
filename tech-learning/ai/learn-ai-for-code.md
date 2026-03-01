@@ -121,9 +121,31 @@ def generate_and_test(task):
 
 ## Code Understanding and Embeddings
 
-### Code Embeddings
+### Code Embeddings: Concepts
 
-Represent code as vectors for search, similarity, classification.
+**Code embeddings** map code (or code + natural language) to dense vectors so similar semantics cluster together. Unlike natural language, code has rigid structure: syntax, control flow, and data flow matter. Naive text embeddings often fail on code because:
+
+| Challenge | Why Text Embeddings Fail | Code-Specific Approach |
+|-----------|--------------------------|-------------------------|
+| **Variable renaming** | `x` vs `count` look different but may be equivalent | Structural similarity; variable normalization |
+| **Syntax variations** | `f()` vs `f ()` | AST-based or syntax-aware tokenization |
+| **Cross-language** | Python vs JS implementations of same algo | Multilingual code models (CodeBERT, UniXcoder) |
+| **Comment vs code** | "increment counter" vs `x += 1` | Bimodal (code+NL) pre-training |
+
+**Embedding strategies**:
+1. **Raw code** — tokenize as text; works for similar surface forms
+2. **AST-aware** — embed AST nodes or paths; captures structure
+3. **Bimodal** — code + natural language in same space for search ("find auth logic" → code)
+
+### Code Embedding Models
+
+| Model | Type | Use Case |
+|-------|------|----------|
+| **CodeBERT** | Encoder (RoBERTa) | Code search, code-to-NL, classification |
+| **UniXcoder** | Encoder + decoder | Cross-lingual, code completion |
+| **GraphCodeBERT** | Data-flow aware | Semantic clone detection, better structure |
+| **StarCoder/Code Llama** | Decoder | Use last hidden state for embedding |
+| **Salesforce/codebert** | MLM on code | General code understanding |
 
 ```python
 from sentence_transformers import SentenceTransformer
@@ -136,6 +158,55 @@ code_embeddings = model.encode([
 ])
 # Similarity between code snippets
 similarity = cosine_similarity([code_embeddings[0]], code_embeddings)[0]
+```
+
+### AST Parsing for Code Understanding
+
+**Abstract Syntax Trees (ASTs)** represent code structure; parsing removes superficial formatting and exposes logic. Use ASTs for:
+
+- **Semantic chunking**: Split by function/class nodes instead of raw lines
+- **Structural search**: Find "all `if` blocks that call `execute`"
+- **Clone detection**: Compare AST subtrees for similar logic
+- **Refactoring**: Identify renameable symbols, dead code
+
+```python
+import ast
+
+def extract_functions(code: str) -> list[dict]:
+    """Parse Python AST and extract function signatures and bodies"""
+    tree = ast.parse(code)
+    functions = []
+    for node in ast.walk(tree):
+        if isinstance(node, ast.FunctionDef):
+            # Get source span for body
+            body_text = ast.get_source_segment(code, node) or ""
+            functions.append({
+                "name": node.name,
+                "args": [a.arg for a in node.args.args],
+                "body_snippet": body_text[:200]  # First 200 chars
+            })
+    return functions
+
+# AST path for similarity: root→node1→...→leaf (used in some code similarity works)
+def get_ast_paths(node, path=""):
+    """Get paths from root to leaves (simplified)"""
+    if isinstance(node, ast.AST):
+        name = type(node).__name__
+        children = list(ast.iter_child_nodes(node))
+        if not children:
+            yield f"{path}/{name}"  # Leaf node
+        for child in children:
+            yield from get_ast_paths(child, f"{path}/{name}")
+```
+
+**Tree-sitter** (multi-language): Fast, incremental, error-tolerant parsing. Use for non-Python languages.
+
+```python
+from tree_sitter import Parser, Language
+# Build grammar for Python, Java, etc.
+parser = Parser(Language.build_library("build/my-languages.so", ["tree-sitter-python"]))
+tree = parser.parse(b"def foo(): pass")
+# Traverse: tree.root_node.children
 ```
 
 ### Code Search
@@ -474,6 +545,33 @@ def migrate_python3(code):
 4. **Context**: Include relevant files for large codebases
 5. **Test** generated code automatically
 6. **Security**: Sanitize inputs, avoid code that accesses external resources
+7. **AST chunking**: For code search, chunk by function/class boundaries, not fixed tokens
+8. **Embedding model**: Use code-specific models (CodeBERT, GraphCodeBERT) for semantic code tasks
+
+---
+
+## Pitfalls and Gotchas
+
+| Pitfall | Cause | Mitigation |
+|---------|-------|------------|
+| **Hallucinated imports** | LLM invents non-existent packages | Validate imports; provide allowed list; use AST to check |
+| **Off-by-one in loops** | Common failure mode for code gen | Add boundary tests; self-repair with error feedback |
+| **Context overflow** | Large codebase, small context | Chunk by module; use semantic search to retrieve relevant files |
+| **Wrong language** | Prompt doesn't specify; model defaults | Explicitly state language and runtime in system prompt |
+| **AST parse errors** | Malformed or partial code | Use tree-sitter (error-tolerant); fallback to line-based chunking |
+| **Embedding code as prose** | Generic text embedding for code | Use CodeBERT/GraphCodeBERT; avoid `sentence-transformers` default |
+| **Over-trusting completion** | FIM can suggest plausible but wrong code | Always run tests; use stricter stop tokens |
+
+---
+
+## References
+
+- **CodeBERT**: Feng et al. (2020) — *CodeBERT: A Pre-Trained Model for Programming and Natural Languages*
+- **GraphCodeBERT**: Guo et al. (2021) — *GraphCodeBERT: Pre-training Code Representations with Data Flow*
+- **StarCoder**: Li et al. (2023) — *StarCoder: May the source be with you!*
+- **Tree-sitter**: https://tree-sitter.github.io/
+- **SWE-bench**: Jimenez et al. (2024) — *SWE-bench: Can Language Models Resolve Real-World GitHub Issues?*
+- **InCoder**: Fried et al. (2023) — *InCoder: A Generative Model for Code Infilling and Synthesis*
 
 ---
 
