@@ -17,6 +17,14 @@ Comprehensive documentation for **Software Architects** and **Principal Engineer
 | [09-observability-sre.md](./09-observability-sre.md) | Metrics, tracing, logging, SRE, SLIs/SLOs |
 | [10-domain-driven-design.md](./10-domain-driven-design.md) | DDD, bounded contexts, aggregates, tactical patterns |
 | [11-performance-engineering.md](./11-performance-engineering.md) | JVM tuning, profiling, load testing, capacity planning |
+| [12-big-data-streaming.md](./12-big-data-streaming.md) | Apache Pulsar, Apache Spark, stream processing, data pipelines |
+| [13-platform-engineering.md](./13-platform-engineering.md) | Internal Developer Platforms, golden paths, Backstage, DevEx metrics |
+| [14-data-mesh-architecture.md](./14-data-mesh-architecture.md) | Data mesh principles, data products, data contracts, lakehouse, medallion architecture |
+| [15-resilience-chaos-engineering.md](./15-resilience-chaos-engineering.md) | Chaos engineering, game days, failure injection, blast radius, Chaos Mesh |
+| [16-architectural-decision-making.md](./16-architectural-decision-making.md) | ADRs, tech radar, fitness functions, evolutionary architecture, tech debt |
+| [17-ml-ai-systems-architecture.md](./17-ml-ai-systems-architecture.md) | MLOps, feature stores, model serving, LLM systems, RAG, vector databases, drift detection |
+| [18-multi-tenancy-saas-architecture.md](./18-multi-tenancy-saas-architecture.md) | Silo/pool/bridge models, data isolation, tenant provisioning, RBAC, metering & billing |
+| [19-cost-engineering-finops.md](./19-cost-engineering-finops.md) | FinOps framework, rightsizing, Savings Plans, Spot, unit economics, cost-aware design |
 
 ## Learning Path for Architects
 
@@ -36,6 +44,19 @@ Comprehensive documentation for **Software Architects** and **Principal Engineer
 9. **Observability & SRE** — SLIs/SLOs, tracing, incident response
 10. **Domain-Driven Design** — Strategic and tactical DDD
 
+### Principal Engineer / Staff+
+11. **Performance Engineering** — JVM tuning, profiling, load testing, capacity planning
+12. **Big Data & Streaming** — Pulsar, Spark, stream processing patterns
+13. **Platform Engineering** — IDP, golden paths, Backstage, developer experience
+14. **Data Mesh** — Data products, data contracts, lakehouse, medallion architecture
+15. **Resilience & Chaos Engineering** — Chaos experiments, game days, failure injection
+16. **Architectural Decision-Making** — ADRs, tech radar, fitness functions, tech debt
+
+### Emerging & Cross-Cutting
+17. **ML/AI Systems Architecture** — MLOps, LLM systems, RAG, feature stores, model serving
+18. **Multi-Tenancy & SaaS** — Tenant isolation, provisioning, billing, noisy neighbor
+19. **Cost Engineering & FinOps** — Cloud cost optimization, unit economics, Savings Plans
+
 ## Key Concepts Overview
 
 | Topic | Concepts |
@@ -48,6 +69,13 @@ Comprehensive documentation for **Software Architects** and **Principal Engineer
 | **Cloud** | K8s, Helm, Terraform, multi-AZ, serverless |
 | **Security** | OAuth2/OIDC, JWT, mTLS, RBAC, secrets rotation |
 | **Observability** | OpenTelemetry, Prometheus, Grafana, distributed tracing |
+| **Platform Engineering** | IDP, Backstage, golden paths, Crossplane, DevEx metrics |
+| **Data Mesh** | Data products, data contracts, Delta/Iceberg, medallion architecture |
+| **Chaos Engineering** | Steady state, blast radius, Chaos Mesh, game days, fitness functions |
+| **Architecture Decisions** | ADRs, tech radar, ATAM, evolutionary architecture, fitness functions |
+| **ML/AI Systems** | Feature stores, MLOps, LLM serving, RAG, vLLM, drift detection |
+| **Multi-Tenancy** | Silo/pool/bridge, RLS, schema-per-tenant, tenant provisioning, metering |
+| **FinOps** | Rightsizing, Savings Plans, Spot, unit economics, cost attribution, Infracost |
 
 ---
 
