@@ -436,6 +436,24 @@ Complete Multimodal AI guide:
 - Embedding alignment
 - Practical examples with Hugging Face
 
+### 43. [Anthropic Claude Guide](./ai/learn-anthropic-claude.md)
+Complete Anthropic Claude guide:
+- Anthropic's mission, Constitutional AI (CAI), and RLAIF
+- Claude model family (Haiku / Sonnet / Opus) and generation history
+- Messages API — streaming, vision, document, multi-turn
+- Prompt engineering: XML tags, prefilling, chain-of-thought, few-shot
+- Extended Thinking (budget_tokens, multi-turn reasoning)
+- Tool use and function calling — full agentic loop
+- Computer Use (browser/desktop automation beta)
+- Prompt Caching — 90% cost reduction on large static contexts
+- Building agents and multi-agent orchestration with Claude
+- Model Context Protocol (MCP) — Anthropic's open standard
+- Claude's safety system (three-tier trust model, prompt injection)
+- Streaming with FastAPI Server-Sent Events
+- Evaluation, testing, and LLM-as-judge patterns
+- Cost optimization: model routing, Batch API, token budgeting
+- Production patterns: retry logic, observability with Langfuse
+
 ### 📐 Mathematics Foundations
 
 ### 43. [Linear Algebra Guide](./ml/learn-linear-algebra.md)
@@ -608,6 +626,7 @@ python examples/05_text_classification_lstm.py
 23. Build [AI Automation](./ai/learn-ai-automation.md) pipelines, master [AI for Code](./ai/learn-ai-for-code.md) and [LLM Ops](./ai/learn-ai-observability-llmops.md), explore [Speech & Voice AI](./ai/learn-speech-voice-ai.md)
 24. Study [State Space Models & Mamba](./ml/learn-state-space-models.md) as Transformer alternative, practice [Data-Centric AI](./ml/learn-synthetic-data-datacentric.md)
 25. Master [LangGraph](./ai/learn-langgraph-agent-orchestration.md) for agent orchestration, study [AI Safety](./ai/learn-ai-safety-red-teaming.md) for responsible deployment
+26. Deep-dive [Anthropic Claude](./ai/learn-anthropic-claude.md) — Constitutional AI, Extended Thinking, tool use, MCP, and production Claude apps
 
 ### Software Architect / Principal Engineer Path
 1. Start with [Distributed Systems](./software-architecture/01-distributed-systems.md) — CAP, consistency, consensus
@@ -718,6 +737,18 @@ python examples/05_text_classification_lstm.py
 - Memory and State Management
 - Agent Communication Patterns
 - Custom Agent Development
+
+### Anthropic Claude
+- Constitutional AI (CAI) and RLAIF alignment
+- Claude model family: Haiku, Sonnet, Opus (3 / 3.5 / 3.7)
+- Messages API: streaming, vision, document input
+- Extended Thinking with budget_tokens
+- Tool use, function calling, agentic loops
+- Computer Use (browser/desktop automation)
+- Prompt Caching (90% cost reduction)
+- Model Context Protocol (MCP)
+- Three-tier trust model (Anthropic / Operator / User)
+- Production: retry logic, observability, cost optimization
 
 ### Mathematics Foundations
 - **Linear Algebra**: Vectors, matrices, eigenvalues, SVD, PCA

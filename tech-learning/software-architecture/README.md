@@ -25,6 +25,7 @@ Comprehensive documentation for **Software Architects** and **Principal Engineer
 | [17-ml-ai-systems-architecture.md](./17-ml-ai-systems-architecture.md) | MLOps, feature stores, model serving, LLM systems, RAG, vector databases, drift detection |
 | [18-multi-tenancy-saas-architecture.md](./18-multi-tenancy-saas-architecture.md) | Silo/pool/bridge models, data isolation, tenant provisioning, RBAC, metering & billing |
 | [19-cost-engineering-finops.md](./19-cost-engineering-finops.md) | FinOps framework, rightsizing, Savings Plans, Spot, unit economics, cost-aware design |
+| [20-anthropic-claude-engineering.md](./20-anthropic-claude-engineering.md) | Claude model family, Messages API, prompt caching, tool use, Extended Thinking, RAG, Bedrock |
 
 ## Learning Path for Architects
 
@@ -56,6 +57,7 @@ Comprehensive documentation for **Software Architects** and **Principal Engineer
 17. **ML/AI Systems Architecture** — MLOps, LLM systems, RAG, feature stores, model serving
 18. **Multi-Tenancy & SaaS** — Tenant isolation, provisioning, billing, noisy neighbor
 19. **Cost Engineering & FinOps** — Cloud cost optimization, unit economics, Savings Plans
+20. **Anthropic & Claude** — Claude model family, API, tool use, Extended Thinking, Bedrock, prompt engineering
 
 ## Key Concepts Overview
 
@@ -76,6 +78,7 @@ Comprehensive documentation for **Software Architects** and **Principal Engineer
 | **ML/AI Systems** | Feature stores, MLOps, LLM serving, RAG, vLLM, drift detection |
 | **Multi-Tenancy** | Silo/pool/bridge, RLS, schema-per-tenant, tenant provisioning, metering |
 | **FinOps** | Rightsizing, Savings Plans, Spot, unit economics, cost attribution, Infracost |
+| **Anthropic / Claude** | Constitutional AI, HHH, prompt caching, tool use, Extended Thinking, Bedrock |
 
 ---
 
